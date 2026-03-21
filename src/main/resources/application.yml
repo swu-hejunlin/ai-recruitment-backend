@@ -1,0 +1,30 @@
+# 简化版配置 - MyBatis Plus
+server:
+  port: 8080
+
+spring:
+  application:
+    name: AIRecruit
+  datasource:
+    url: jdbc:mysql://localhost:3306/ai_recruitment?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      password: 123456
+      database: 2
+
+# MyBatis Plus基础配置
+mybatis-plus:
+  mapper-locations: classpath:mapper/**/*.xml
+  type-aliases-package: com.example.airecruitmentbackend.entity
+  configuration:
+    map-underscore-to-camel-case: true
+
+# JWT配置
+jwt:
+  secret: ai-recruitment-jwt-secret-key-2026-very-long-key-for-security-1234567890
+  expiration: 7200000  # 2小时（毫秒）

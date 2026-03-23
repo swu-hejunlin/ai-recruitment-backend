@@ -6,14 +6,19 @@ import com.example.airecruitmentbackend.dto.LoginResponse;
 import com.example.airecruitmentbackend.dto.SendCodeRequest;
 import com.example.airecruitmentbackend.dto.SwitchRoleRequest;
 import com.example.airecruitmentbackend.entity.User;
+import com.example.airecruitmentbackend.entity.JobSeeker;
+import com.example.airecruitmentbackend.entity.Company;
 import com.example.airecruitmentbackend.exception.BusinessException;
 import com.example.airecruitmentbackend.mapper.UserMapper;
+import com.example.airecruitmentbackend.mapper.JobSeekerMapper;
+import com.example.airecruitmentbackend.mapper.CompanyMapper;
 import com.example.airecruitmentbackend.service.UserService;
-import com.example.airecruitmentbackend.config.JwtUtil;
+import com.example.airecruitmentbackend.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -29,6 +34,8 @@ import java.util.concurrent.TimeUnit;
 public class UserServiceImpl implements UserService {
 
     private final UserMapper userMapper;
+    private final JobSeekerMapper jobSeekerMapper;
+    private final CompanyMapper companyMapper;
     private final RedisTemplate<String, Object> redisTemplate;
     private final JwtUtil jwtUtil;
 
@@ -137,6 +144,7 @@ public class UserServiceImpl implements UserService {
      * @return 登录响应，包含新的JWT令牌和用户信息
      */
     @Override
+    @Transactional
     public LoginResponse switchRole(SwitchRoleRequest request) {
         String phone = request.getPhone();
         String code = request.getCode();
@@ -190,14 +198,31 @@ public class UserServiceImpl implements UserService {
         return new LoginResponse(token, user.getId(), user.getRole(), false, null);
     }
 
+    @Override
+
+    public Integer getRoleByUserId(Long userId) {
+        if (userId == null) {
+            throw new BusinessException("用户ID不能为空");
+        }
+
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+
+        return user.getRole();
+    }
+
     /**
      * 自动注册新用户
+     * 同时创建对应的初始数据记录（求职者信息或企业信息）
      *
      * @param phone 手机号
      * @param role  用户角色
      * @return 新注册的用户对象
      */
-    private User registerUser(String phone, Integer role) {
+    @Transactional
+    public User registerUser(String phone, Integer role) {
         User user = new User();
         user.setPhone(phone);
         user.setRole(role);
@@ -206,7 +231,24 @@ public class UserServiceImpl implements UserService {
 
         userMapper.insert(user);
 
-        log.info("自动注册新用户：userId={}, phone={}, role={}", user.getId(), phone, role);
+        // 根据角色自动创建对应的初始数据记录
+        if (role == 1) {
+            // 创建空的求职者信息记录，设置默认用户名
+            JobSeeker jobSeeker = new JobSeeker();
+            jobSeeker.setUserId(user.getId());
+            jobSeeker.setName("求职者_" + phone); // 默认用户名：求职者_手机号
+            jobSeekerMapper.insert(jobSeeker);
+            log.info("自动创建求职者初始信息：jobSeekerId={}, userId={}", jobSeeker.getId(), user.getId());
+        } else if (role == 2) {
+            // 创建空的企业信息记录，设置默认企业名
+            Company company = new Company();
+            company.setUserId(user.getId());
+            company.setCompanyName("企业_" + phone); // 默认企业名：企业_手机号
+            companyMapper.insert(company);
+            log.info("自动创建企业初始信息：companyId={}, userId={}", company.getId(), user.getId());
+        }
+
+        log.info("自动注册新用户并创建初始数据：userId={}, phone={}, role={}", user.getId(), phone, role);
 
         return user;
     }

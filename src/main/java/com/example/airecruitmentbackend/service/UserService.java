@@ -37,4 +37,12 @@ public interface UserService {
      * @return 登录响应，包含新的JWT令牌和用户信息
      */
     LoginResponse switchRole(SwitchRoleRequest request);
+
+    /**
+     * 根据用户ID获取用户角色
+     *
+     * @param userId 用户ID
+     * @return 用户角色
+     */
+    Integer getRoleByUserId(Long userId);
 }

@@ -1,4 +1,4 @@
-package com.example.airecruitmentbackend.config;
+package com.example.airecruitmentbackend.util;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import jakarta.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
@@ -129,5 +130,20 @@ public class JwtUtil {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /**
+     * 从HttpServletRequest中获取用户ID（兼容带Bearer前缀和不带的情况）
+     *
+     * @param request HttpServletRequest
+     * @return 用户ID
+     */
+    public Long getUserIdFromToken(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            return getUserIdFromToken(token);
+        }
+        return null;
     }
 }

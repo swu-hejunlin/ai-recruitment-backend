@@ -48,6 +48,15 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 处理文件上传异常
+     */
+    @ExceptionHandler(FileUploadException.class)
+    public Result<?> handleFileUploadException(FileUploadException e) {
+        log.error("文件上传异常：{}", e.getMessage());
+        return Result.error(e.getCode(), e.getMessage());
+    }
+
+    /**
      * 处理其他未知异常
      */
     @ExceptionHandler(Exception.class)

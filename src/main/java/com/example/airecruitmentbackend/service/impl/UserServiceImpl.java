@@ -236,6 +236,7 @@ public class UserServiceImpl implements UserService {
             // 创建空的求职者信息记录，设置默认用户名
             JobSeeker jobSeeker = new JobSeeker();
             jobSeeker.setUserId(user.getId());
+            jobSeeker.setPhone(phone); // 默认使用注册手机号
             jobSeeker.setName("求职者_" + phone); // 默认用户名：求职者_手机号
             jobSeekerMapper.insert(jobSeeker);
             log.info("自动创建求职者初始信息：jobSeekerId={}, userId={}", jobSeeker.getId(), user.getId());

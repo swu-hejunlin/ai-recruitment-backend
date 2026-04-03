@@ -27,6 +27,11 @@ public class JobSeeker {
     private Long userId;
 
     /**
+     * 手机号（与账号关联，默认使用注册手机号）
+     */
+    private String phone;
+
+    /**
      * 姓名
      */
     private String name;
@@ -50,21 +55,6 @@ public class JobSeeker {
      * 年龄
      */
     private Integer age;
-
-    /**
-     * 学历层次：1-高中及以下，2-大专，3-本科，4-硕士，5-博士
-     */
-    private Integer educationLevel;
-
-    /**
-     * 毕业院校
-     */
-    private String graduateSchool;
-
-    /**
-     * 专业
-     */
-    private String major;
 
     /**
      * 工作年限（年）

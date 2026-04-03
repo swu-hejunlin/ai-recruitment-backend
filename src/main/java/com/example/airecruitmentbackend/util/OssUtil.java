@@ -51,12 +51,22 @@ public class OssUtil {
         String newFileName = UUID.randomUUID().toString() + fileExtension;
         String objectKey = filePath + newFileName;
 
-        // 3. 上传文件（try-with-resources 自动关闭流，无需手动处理）
+        // 3. 设置元数据 → 解决PDF预览问题
+        ObjectMetadata metadata = new ObjectMetadata();
+        metadata.setContentDisposition("inline"); // 强制预览，不下载
+
+        // 自动识别PDF，设置正确ContentType
+        if (originalFilename.endsWith(".pdf") || originalFilename.endsWith(".PDF")) {
+            metadata.setContentType("application/pdf");
+        }
+
+        // 4. 上传文件（try-with-resources 自动关闭流，无需手动处理）
         try (InputStream inputStream = file.getInputStream()) {
             PutObjectRequest putObjectRequest = new PutObjectRequest(
                     ossConfig.getBucketName(),
                     objectKey,
-                    inputStream
+                    inputStream,
+                    metadata
             );
             ossClient.putObject(putObjectRequest);
             ossClient.setObjectAcl(ossConfig.getBucketName(), objectKey, CannedAccessControlList.PublicRead);
@@ -250,7 +260,7 @@ public class OssUtil {
             throw new IllegalArgumentException("文件URL不能为空");
         }
         if (expiration <= 0) {
-            throw new IllegalArgumentException("过期时间必须大于0"); // 新增参数校验
+            throw new IllegalArgumentException("过期时间必须大于0");
         }
 
         String objectKey = getObjectKeyFromUrl(fileUrl);
@@ -260,12 +270,25 @@ public class OssUtil {
 
         try {
             Date expirationDate = new Date(System.currentTimeMillis() + expiration * 1000L);
-            URL url = ossClient.generatePresignedUrl(ossConfig.getBucketName(), objectKey, expirationDate);
-            log.info("生成带签名的URL：objectKey={}, expiration={}秒", objectKey, expiration);
-            return url.toString();
+
+            // 强制覆盖响应头，实现预览
+            GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(
+                    ossConfig.getBucketName(),
+                    objectKey
+            );
+            request.setExpiration(expirationDate);
+
+            // 关键：强制 inline
+            ResponseHeaderOverrides headers = new ResponseHeaderOverrides();
+            headers.setContentDisposition("inline");
+            request.setResponseHeaders(headers);
+
+            URL url = ossClient.generatePresignedUrl(request);
+            log.info("生成预览签名URL：objectKey={}", objectKey);
+            return url.toString().replace("http://", "https://");
         } catch (Exception e) {
-            log.error("生成带签名的URL失败：objectKey={}", objectKey, e);
-            throw new RuntimeException("生成带签名的URL失败：" + e.getMessage(), e);
+            log.error("生成签名URL失败：objectKey={}", objectKey, e);
+            throw new RuntimeException("生成签名URL失败：" + e.getMessage(), e);
         }
     }
 
@@ -284,6 +307,9 @@ public class OssUtil {
      */
     private String getObjectKeyFromUrl(String fileUrl) {
         try {
+            if (fileUrl.contains("?")) {
+                fileUrl = fileUrl.substring(0, fileUrl.indexOf("?"));
+            }
             String endpoint = ossConfig.getEndpoint().replace("http://", "").replace("https://", "");
             String prefix = "https://" + ossConfig.getBucketName() + "." + endpoint + "/";
             if (fileUrl.startsWith(prefix)) {

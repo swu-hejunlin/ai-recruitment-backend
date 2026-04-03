@@ -6,8 +6,10 @@ import com.example.airecruitmentbackend.entity.JobSeeker;
 import com.example.airecruitmentbackend.exception.BusinessException;
 import com.example.airecruitmentbackend.mapper.JobSeekerMapper;
 import com.example.airecruitmentbackend.service.JobSeekerService;
+import com.example.airecruitmentbackend.util.OssUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class JobSeekerServiceImpl extends ServiceImpl<JobSeekerMapper, JobSeeker> implements JobSeekerService {
 
     private final JobSeekerMapper jobSeekerMapper;
+
+    @Autowired
+    OssUtil ossUtil;
 
     @Override
     public JobSeeker getByUserId(Long userId) {
@@ -98,5 +103,24 @@ public class JobSeekerServiceImpl extends ServiceImpl<JobSeekerMapper, JobSeeker
 
         log.info("更新求职者简历成功：userId={}, resumeUrl={}", userId, resumeUrl);
         return true;
+    }
+
+    @Override
+    public String getAvatarUrl(Long userId) {
+        JobSeeker jobSeeker = getByUserId(userId);
+        if (jobSeeker == null) {
+            return null;
+        }
+        return jobSeeker.getAvatar();
+    }
+
+    @Override
+    public String getResumeUrl(Long userId) {
+        JobSeeker jobSeeker = getByUserId(userId);
+        if (jobSeeker == null) {
+            return null;
+        }
+
+        return ossUtil.generatePresignedUrl(jobSeeker.getResumeUrl(),3600 * 24);
     }
 }

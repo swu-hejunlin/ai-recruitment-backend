@@ -1,6 +1,7 @@
 package com.example.airecruitmentbackend.exception;
 
 import com.example.airecruitmentbackend.common.Result;
+import io.jsonwebtoken.JwtException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
@@ -54,6 +55,12 @@ public class GlobalExceptionHandler {
     public Result<?> handleFileUploadException(FileUploadException e) {
         log.error("文件上传异常：{}", e.getMessage());
         return Result.error(e.getCode(), e.getMessage());
+    }
+
+    @ExceptionHandler(JwtException.class)
+    public Result<?> handleJwtException(JwtException e) {
+        log.error("身份验证失败：{}", e.getMessage());
+        return Result.error("身份验证失败,请尝试重新登录");
     }
 
     /**

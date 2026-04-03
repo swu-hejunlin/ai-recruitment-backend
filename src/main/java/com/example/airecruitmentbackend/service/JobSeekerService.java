@@ -41,4 +41,20 @@ public interface JobSeekerService extends IService<JobSeeker> {
      * @return 是否成功
      */
     boolean updateResume(Long userId, String resumeUrl);
+
+    /**
+     * 获取头像URL
+     *
+     * @param userId 用户ID
+     * @return 头像URL
+     */
+    String getAvatarUrl(Long userId);
+
+    /**
+     * 获取简历URL
+     *
+     * @param userId 用户ID
+     * @return 简历URL
+     */
+    String getResumeUrl(Long userId);
 }

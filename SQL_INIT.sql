@@ -1,7 +1,7 @@
 -- ========================================
 -- 智能招聘平台 - 数据库初始化脚本
--- 创建时间：2026-03-20
--- 说明：包含用户表及相关索引设计
+-- 创建时间：2026-03-22
+-- 说明：包含用户表、求职者信息表、企业信息表及相关索引设计
 -- ========================================
 
 -- 创建数据库（如果不存在）
@@ -11,6 +11,7 @@ USE ai_recruitment;
 
 -- ========================================
 -- 用户表
+-- 存储求职者和企业HR的基本登录信息
 -- ========================================
 DROP TABLE IF EXISTS `user`;
 
@@ -27,20 +28,270 @@ CREATE TABLE `user` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
 
 -- ========================================
--- 说明：
--- 1. 验证码通过Redis存储，无需建表
+-- 求职者信息表
+-- 存储求职者的详细个人信息，与user表通过user_id关联
+-- ========================================
+DROP TABLE IF EXISTS `job_seeker`;
+
+CREATE TABLE `job_seeker` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '求职者ID（主键）',
+    `user_id` BIGINT NOT NULL COMMENT '关联用户ID',
+    `phone` VARCHAR(20) DEFAULT NULL COMMENT '手机号（与账号关联，默认使用注册手机号）',
+    `name` VARCHAR(50) NOT NULL COMMENT '姓名',
+    `gender` TINYINT DEFAULT NULL COMMENT '性别：0-未知，1-男，2-女',
+    `avatar` VARCHAR(500) DEFAULT NULL COMMENT '头像URL',
+    `email` VARCHAR(100) DEFAULT NULL COMMENT '邮箱地址',
+    `age` INT DEFAULT NULL COMMENT '年龄',
+    `work_years` INT DEFAULT NULL COMMENT '工作年限（年）',
+    `current_salary` DECIMAL(10,2) DEFAULT NULL COMMENT '当前薪资（万元/年）',
+    `expected_salary` DECIMAL(10,2) DEFAULT NULL COMMENT '期望薪资（万元/年）',
+    `current_status` TINYINT DEFAULT NULL COMMENT '当前状态：1-在职，2-离职，3-在读学生',
+    `city` VARCHAR(50) DEFAULT NULL COMMENT '所在城市',
+    `address` VARCHAR(200) DEFAULT NULL COMMENT '详细地址',
+    `introduction` VARCHAR(500) DEFAULT NULL COMMENT '个人简介',
+    `skills` TEXT DEFAULT NULL COMMENT '技能标签（JSON数组格式，如：["Java","Spring","MySQL"]）',
+    `resume_url` VARCHAR(500) DEFAULT NULL COMMENT '简历附件URL',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_user_id` (`user_id`),
+    KEY `idx_name` (`name`),
+    KEY `idx_city` (`city`),
+    KEY `idx_work_years` (`work_years`),
+    KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='求职者信息表';
+
+-- ========================================
+-- 教育经历表
+-- 存储求职者的教育背景，与job_seeker表通过job_seeker_id关联
+-- ========================================
+CREATE TABLE `education` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `job_seeker_id` BIGINT NOT NULL COMMENT '求职者ID（外键）',
+    `school_name` VARCHAR(100) NOT NULL COMMENT '学校名称',
+    `major` VARCHAR(100) DEFAULT NULL COMMENT '专业',
+    `education_level` TINYINT NOT NULL COMMENT '学历：1-高中及以下，2-大专，3-本科，4-硕士，5-博士',
+    `start_date` DATE DEFAULT NULL COMMENT '入学时间',
+    `end_date` DATE DEFAULT NULL COMMENT '毕业时间',
+    `description` TEXT DEFAULT NULL COMMENT '在校表现/主要课程描述',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_job_seeker_id` (`job_seeker_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='教育经历表';
+
+-- ========================================
+-- 工作/实习经历表
+-- 存储求职者的实际工作经验和实习经历，与job_seeker表通过job_seeker_id关联
+-- ========================================
+CREATE TABLE `experience` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '经历ID（主键）',
+    `job_seeker_id` BIGINT NOT NULL COMMENT '求职者ID（外键）',
+    `company_name` VARCHAR(100) NOT NULL COMMENT '公司名称',
+    `company_industry` VARCHAR(50) DEFAULT NULL COMMENT '公司所属行业',
+    `position` VARCHAR(100) NOT NULL COMMENT '职位',
+    `start_date` DATE NOT NULL COMMENT '开始时间',
+    `end_date` DATE DEFAULT NULL COMMENT '结束时间',
+    `description` TEXT DEFAULT NULL COMMENT '工作/实习内容描述',
+    `is_internship` TINYINT NOT NULL DEFAULT 0 COMMENT '是否为实习：0-否，1-是',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_job_seeker_id` (`job_seeker_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='工作/实习经历表';
+
+-- ========================================
+-- 项目经历表
+-- 存储求职者的项目经验，与job_seeker表通过job_seeker_id关联
+-- ========================================
+CREATE TABLE `project` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '项目ID（主键）',
+    `job_seeker_id` BIGINT NOT NULL COMMENT '求职者ID（外键）',
+    `project_name` VARCHAR(100) NOT NULL COMMENT '项目名称',
+    `project_role` VARCHAR(100) DEFAULT NULL COMMENT '项目角色',
+    `start_date` DATE NOT NULL COMMENT '项目开始时间',
+    `end_date` DATE DEFAULT NULL COMMENT '项目结束时间',
+    `description` TEXT DEFAULT NULL COMMENT '项目描述',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_job_seeker_id` (`job_seeker_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='项目经历表';
+
+-- ========================================
+-- 职位发布表
+-- 存储企业发布的职位信息，与company表通过company_id关联
+-- ========================================
+DROP TABLE IF EXISTS `position`;
+CREATE TABLE `position` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '职位ID（主键）',
+    `company_id` BIGINT NOT NULL COMMENT '所属企业ID',
+    `boss_id` BIGINT NOT NULL COMMENT '发布者(Boss/HR)ID',
+    `title` VARCHAR(100) NOT NULL COMMENT '职位名称',
+    `category` VARCHAR(50) NOT NULL COMMENT '职位类别(如: 后端开发)',
+    `city` VARCHAR(50) NOT NULL COMMENT '工作城市',
+    `address` VARCHAR(200) COMMENT '详细工作地址',
+    `salary_min` INT COMMENT '最低薪资(K)',
+    `salary_max` INT COMMENT '最高薪资(K)',
+    `education_min` TINYINT COMMENT '最低学历要求: 1-5',
+    `work_years_min` INT COMMENT '最低工作年限要求',
+    `description` TEXT NOT NULL COMMENT '岗位职责',
+    `requirement` TEXT NOT NULL COMMENT '任职要求',
+    `status` TINYINT DEFAULT 1 COMMENT '状态: 1-招聘中, 0-已关闭',
+    `tags` VARCHAR(500) COMMENT '职位福利标签(JSON数组, 如["五险一金","双休"])',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_boss` (`boss_id`),
+    KEY `idx_company` (`company_id`),
+    KEY `idx_category` (`category`),
+    KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='职位发布表';
+
+-- ========================================
+-- 投递记录表
+-- 建立求职者与职位的关联
+-- ========================================
+DROP TABLE IF EXISTS `application`;
+CREATE TABLE `application` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '投递ID',
+    `job_seeker_id` BIGINT NOT NULL COMMENT '求职者ID',
+    `position_id` BIGINT NOT NULL COMMENT '职位ID',
+    `company_id` BIGINT NOT NULL COMMENT '所属企业ID（冗余，方便Boss快速查询）',
+    `boss_id` BIGINT NOT NULL COMMENT '接收投递的Boss/HR ID（冗余，方便通知查询）',
+    `status` TINYINT DEFAULT 1 COMMENT '投递状态：1-待查看，2-已查看，3-面试中，4-不合适，5-录用',
+    `ai_score` DECIMAL(5,2) DEFAULT NULL COMMENT 'AI匹配分（第二阶段预留：0-100分）',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '投递时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_seeker_position` (`job_seeker_id`, `position_id`),
+    KEY `idx_boss_status` (`boss_id`, `status`),
+    KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='投递记录表';
+
+-- ========================================
+-- 系统通知表
+-- 负责站内提醒（红点反馈）
+-- ========================================
+DROP TABLE IF EXISTS `notification`;
+CREATE TABLE `notification` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '通知ID',
+    `receiver_id` BIGINT NOT NULL COMMENT '接收者用户ID',
+    `type` TINYINT NOT NULL COMMENT '通知类型：1-新投递提醒，2-面试状态变更，3-系统公告',
+    `title` VARCHAR(100) NOT NULL COMMENT '通知标题',
+    `content` TEXT COMMENT '通知内容',
+    `business_id` BIGINT COMMENT '业务关联ID（如指向具体的application_id）',
+    `is_read` TINYINT DEFAULT 0 COMMENT '已读状态：0-未读，1-已读',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '触发时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_receiver_read` (`receiver_id`, `is_read`),
+    KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系统通知表';
+
+-- ========================================
+-- 企业信息表
+-- 存储企业的详细信息，与user表通过user_id关联
+-- ========================================
+DROP TABLE IF EXISTS `company`;
+
+CREATE TABLE `company` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '企业ID（主键）',
+    `user_id` BIGINT NOT NULL COMMENT '关联用户ID（企业HR）',
+    `company_name` VARCHAR(100) NOT NULL COMMENT '企业名称',
+    `logo` VARCHAR(500) DEFAULT NULL COMMENT '企业logo URL',
+    `legal_person` VARCHAR(50) DEFAULT NULL COMMENT '法人代表',
+    `industry` VARCHAR(50) DEFAULT NULL COMMENT '所属行业',
+    `scale` TINYINT DEFAULT NULL COMMENT '企业规模：1-0-20人，2-20-99人，3-100-499人，4-500-999人，5-1000-9999人，6-10000人以上',
+    `financing_stage` TINYINT DEFAULT NULL COMMENT '融资阶段：1-未融资，2-天使轮，3-A轮，4-B轮，5-C轮，6-D轮及以上，7-已上市，8-不需要融资',
+    `city` VARCHAR(50) DEFAULT NULL COMMENT '所在城市',
+    `address` VARCHAR(200) DEFAULT NULL COMMENT '详细地址',
+    `email` VARCHAR(100) DEFAULT NULL COMMENT '企业邮箱',
+    `phone` VARCHAR(20) DEFAULT NULL COMMENT '企业联系电话',
+    `website` VARCHAR(200) DEFAULT NULL COMMENT '企业官网',
+    `description` TEXT DEFAULT NULL COMMENT '企业简介',
+    `welfare` TEXT DEFAULT NULL COMMENT '福利待遇（JSON数组格式）',
+    `business_license` VARCHAR(500) DEFAULT NULL COMMENT '营业执照URL',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_user_id` (`user_id`),
+    KEY `idx_company_name` (`company_name`),
+    KEY `idx_city` (`city`),
+    KEY `idx_industry` (`industry`),
+    KEY `idx_scale` (`scale`),
+    KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='企业信息表';
+
+-- ========================================
+-- 数据字典说明
+-- ========================================
+
+-- 【用户角色 role】
+-- 1: 求职者
+-- 2: 企业HR
+
+-- 【性别 gender】
+-- 0: 未知
+-- 1: 男
+-- 2: 女
+
+-- 【学历层次 education_level】
+-- 1: 高中及以下
+-- 2: 大专
+-- 3: 本科
+-- 4: 硕士
+-- 5: 博士
+
+-- 【当前状态 current_status】
+-- 1: 在职
+-- 2: 离职
+-- 3: 在读学生
+
+-- 【企业规模 scale】
+-- 1: 0-20人
+-- 2: 20-99人
+-- 3: 100-499人
+-- 4: 500-999人
+-- 5: 1000-9999人
+-- 6: 10000人以上
+
+-- 【融资阶段 financing_stage】
+-- 1: 未融资
+-- 2: 天使轮
+-- 3: A轮
+-- 4: B轮
+-- 5: C轮
+-- 6: D轮及以上
+-- 7: 已上市
+-- 8: 不需要融资
+
+-- ========================================
+-- 表关系说明
+-- ========================================
+
+-- 1. user表是主表，存储用户的手机号和角色信息
+-- 2. job_seeker表和company表通过user_id与user表一一对应
+-- 3. education表、experience表和project表通过job_seeker_id与job_seeker表关联（一对多）
+-- 4. 一个手机号只能有一个账号，但可以在求职者和企业HR之间切换
+-- 5. 验证码存储在Redis中，无需建表
 --    Redis key格式：login:code:{phone}
 --    Redis value：6位数字验证码
 --    Redis过期时间：300秒（5分钟）
---
--- 2. 登录流程：
---    - 用户调用发送验证码接口，后端生成验证码存入Redis
---    - 用户提交手机号+验证码+角色进行登录
---    - 后端校验验证码，成功则生成JWT令牌返回
---    - 如果用户不存在，自动注册新用户
---
--- 3. 预留扩展：
---    - 后续可增加用户昵称、头像、邮箱等字段
---    - 预留企业关联字段，用于企业HR管理岗位
---    - 预留简历关联字段，用于求职者管理简历
+
+-- 表关系：
+-- user (1) ────── (1) job_seeker
+-- user (1) ────── (1) company
+-- job_seeker (1) ──── (N) education
+-- job_seeker (1) ──── (N) experience
+-- job_seeker (1) ──── (N) project
+
 -- ========================================
+-- 预留扩展
+-- ========================================
+
+-- 后续可创建以下表：
+-- - position: 岗位信息表（企业发布的职位）
+-- - resume: 简历表（更详细的简历信息）
+-- - application: 投递记录表（求职者投递的岗位）
+-- - interview: 面试记录表
+-- - chat: 聊天记录表（AI面试）

@@ -46,23 +46,6 @@ public class JobSeekerUpdateRequest {
     private Integer age;
 
     /**
-     * 学历层次：1-高中及以下，2-大专，3-本科，4-硕士，5-博士
-     */
-    @Min(value = 1, message = "学历层次值不正确")
-    @Max(value = 5, message = "学历层次值不正确")
-    private Integer educationLevel;
-
-    /**
-     * 毕业院校
-     */
-    private String graduateSchool;
-
-    /**
-     * 专业
-     */
-    private String major;
-
-    /**
      * 工作年限（年）
      */
     @Min(value = 0, message = "工作年限不能为负数")

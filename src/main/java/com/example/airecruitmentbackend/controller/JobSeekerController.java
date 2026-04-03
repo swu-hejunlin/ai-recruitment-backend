@@ -1,9 +1,13 @@
 package com.example.airecruitmentbackend.controller;
 
 import com.example.airecruitmentbackend.common.Result;
+import com.example.airecruitmentbackend.dto.JobSeekerDetailDTO;
 import com.example.airecruitmentbackend.entity.JobSeeker;
 import com.example.airecruitmentbackend.dto.JobSeekerUpdateRequest;
+import com.example.airecruitmentbackend.service.EducationService;
+import com.example.airecruitmentbackend.service.ExperienceService;
 import com.example.airecruitmentbackend.service.JobSeekerService;
+import com.example.airecruitmentbackend.service.ProjectService;
 import com.example.airecruitmentbackend.service.UserService;
 import com.example.airecruitmentbackend.util.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,27 +28,38 @@ import org.springframework.web.bind.annotation.*;
 public class JobSeekerController {
 
     private final JobSeekerService jobSeekerService;
+    private final EducationService educationService;
+    private final ExperienceService experienceService;
+    private final ProjectService projectService;
     private final UserService userService;
     private final JwtUtil jwtUtil;
 
     /**
-     * 获取求职者信息
+     * 获取求职者完整信息
      * 接口地址：GET /api/job-seeker/info
+     * 返回基本信息 + 教育经历 + 工作/实习经历 + 项目经历
      *
      * @param request HTTP请求（从请求头中获取JWT令牌）
-     * @return 求职者信息
+     * @return 求职者完整信息
      */
     @GetMapping("/info")
-    public Result<JobSeeker> getJobSeekerInfo(HttpServletRequest request) {
+    public Result<JobSeekerDetailDTO> getJobSeekerInfo(HttpServletRequest request) {
         Long userId = jwtUtil.getUserIdFromToken(request);
-        log.info("获取求职者信息请求，userId：{}", userId);
+        log.info("获取求职者完整信息请求，userId：{}", userId);
 
         JobSeeker jobSeeker = jobSeekerService.getByUserId(userId);
         if (jobSeeker == null) {
             return Result.error("求职者信息不存在，请先完善个人信息");
         }
 
-        return Result.success("获取求职者信息成功", jobSeeker);
+        // 构建完整信息DTO
+        JobSeekerDetailDTO detailDTO = new JobSeekerDetailDTO();
+        detailDTO.setJobSeeker(jobSeeker);
+        detailDTO.setEducations(educationService.getByJobSeekerId(jobSeeker.getId()));
+        detailDTO.setExperiences(experienceService.getByJobSeekerId(jobSeeker.getId()));
+        detailDTO.setProjects(projectService.getByJobSeekerId(jobSeeker.getId()));
+
+        return Result.success("获取求职者信息成功", detailDTO);
     }
 
     /**
@@ -110,5 +125,37 @@ public class JobSeekerController {
 
         jobSeekerService.updateResume(userId, resumeUrl);
         return Result.success("上传简历成功", null);
+    }
+
+    /**
+     * 查看头像
+     * 接口地址：GET /api/job-seeker/avatar
+     *
+     * @param request HTTP请求（从请求头中获取JWT令牌）
+     * @return 头像URL
+     */
+    @GetMapping("/avatar")
+    public Result<String> getAvatar(HttpServletRequest request) {
+        Long userId = jwtUtil.getUserIdFromToken(request);
+        log.info("获取求职者头像请求，userId：{}", userId);
+
+        String avatarUrl = jobSeekerService.getAvatarUrl(userId);
+        return Result.success("获取头像成功", avatarUrl);
+    }
+
+    /**
+     * 查看简历
+     * 接口地址：GET /api/job-seeker/resume
+     *
+     * @param request HTTP请求（从请求头中获取JWT令牌）
+     * @return 简历URL
+     */
+    @GetMapping("/resume")
+    public Result<String> getResume(HttpServletRequest request) {
+        Long userId = jwtUtil.getUserIdFromToken(request);
+        log.info("获取求职者简历请求，userId：{}", userId);
+
+        String resumeUrl = jobSeekerService.getResumeUrl(userId);
+        return Result.success("获取简历成功", resumeUrl);
     }
 }

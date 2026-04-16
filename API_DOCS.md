@@ -14,6 +14,123 @@
 - **字符编码**: UTF-8
 - **认证方式**: JWT Bearer Token
 
+## 认证机制
+
+### 全局拦截器
+后端使用全局 JWT 拦截器进行认证校验，分为**公开接口**和**需认证接口**。
+
+### 角色说明
+| role | 角色名称 | 说明 |
+|------|---------|------|
+| 1 | 求职者 | 可投递简历、管理个人信息、查看投递记录 |
+| 2 | 企业HR | 可发布职位、查看投递、管理企业信息 |
+| 3 | 管理员 | 预留 |
+
+> **安全说明**：系统在后端对关键接口实施了角色校验和数据归属权校验，确保用户只能操作自己的数据。
+
+---
+
+### 接口认证要求汇总
+
+#### 一、公开接口（无需登录）
+
+| 接口地址 | 说明 |
+|----------|------|
+| `POST /api/user/send-code` | 发送验证码 |
+| `POST /api/user/login` | 验证码登录 |
+| `GET /api/position/list` | 职位列表（搜索筛选） |
+| `GET /api/position/detail?id=1` | 职位详情 |
+| `GET /api/position/latest` | 最新职位（首页推荐） |
+| `GET /api/position/hot` | 热门职位（首页推荐） |
+| `GET /api/position/company-info?positionId=1` | 职位对应的公司信息 |
+| `GET /api/position/detail-with-company?id=1` | 职位详情（含公司信息） |
+| `GET /api/company/{id}` | 根据公司ID查看公司详情 |
+
+> **安全说明**：简历相关接口（education/experience/project）现在统一需要登录认证，防止用户隐私信息泄露。
+
+#### 二、需要认证的接口
+
+| 模块 | 接口地址 | 说明 |
+|------|----------|------|
+| **用户** | `POST /api/user/switch-role` | 身份切换 |
+| **求职者** | `GET /api/job-seeker/info` | 获取自己的完整简历信息 |
+| | `PUT /api/job-seeker/update` | 更新个人信息 |
+| | `POST /api/job-seeker/avatar` | 上传头像 |
+| | `GET /api/job-seeker/avatar` | 获取头像 |
+| | `POST /api/job-seeker/resume` | 上传简历 |
+| | `GET /api/job-seeker/resume` | 获取简历 |
+| **教育经历** | `GET /api/education/list` | 获取自己的教育经历（仅求职者，需登录） |
+| | `POST /api/education/add` | 新增教育经历（需登录） |
+| | `PUT /api/education/update` | 更新教育经历（需登录，已校验归属权） |
+| | `DELETE /api/education/delete` | 删除教育经历（需登录，已校验归属权） |
+| **工作经历** | `GET /api/experience/list` | 获取自己的工作经历（仅求职者，需登录） |
+| | `POST /api/experience/add` | 新增工作经历（需登录） |
+| | `PUT /api/experience/update` | 更新工作经历（需登录，已校验归属权） |
+| | `DELETE /api/experience/delete` | 删除工作经历（需登录，已校验归属权） |
+| **项目经历** | `GET /api/project/list` | 获取自己的项目经历（仅求职者，需登录） |
+| | `POST /api/project/add` | 新增项目经历（需登录） |
+| | `PUT /api/project/update` | 更新项目经历（需登录，已校验归属权） |
+| | `DELETE /api/project/delete` | 删除项目经历（需登录，已校验归属权） |
+| **企业** | `GET /api/company/info` | 获取自己的企业信息（仅企业HR，需校验角色） |
+| | `PUT /api/company/update` | 更新企业信息（仅企业HR，需校验角色，已校验归属权） |
+| | `POST /api/company/logo` | 上传logo（仅企业HR，需校验角色） |
+| | `POST /api/company/license` | 上传营业执照（仅企业HR，需校验角色） |
+| **职位** | `POST /api/position/add` | 发布职位（仅Boss） |
+| | `PUT /api/position/update` | 更新职位（仅Boss） |
+| | `DELETE /api/position/delete` | 删除职位（仅Boss） |
+| | `GET /api/position/boss/list` | Boss查询自己发布的职位（仅Boss） |
+| | `PUT /api/position/close` | 关闭职位（仅Boss） |
+| | `PUT /api/position/open` | 开启职位（仅Boss） |
+| **投递** | `POST /api/application/apply` | 投递简历（仅求职者，需校验角色） |
+| | `GET /api/application/boss/list` | Boss查看投递列表（仅企业HR，需校验角色） |
+| | `GET /api/application/seeker/list` | 求职者查看投递列表（仅求职者，需校验角色） |
+| | `GET /api/application/detail` | 投递详情（已校验归属权） |
+| | `GET /api/application/position` | 通过投递查看职位 |
+| | `GET /api/application/company` | 通过投递查看公司 |
+| | `GET /api/application/job-seeker/simple` | Boss查看求职者简要信息（仅企业HR，已校验归属权） |
+| | `GET /api/application/job-seeker/resume` | Boss查看完整在线简历（仅企业HR，已校验归属权） |
+| | `PUT /api/application/read` | 标记已查看（仅企业HR） |
+| | `PUT /api/application/status` | 更新投递状态（仅企业HR） |
+| **文件** | `POST /api/file/upload` | 上传文件 |
+| | `POST /api/file/upload-batch` | 批量上传 |
+| **通知** | `GET /api/notification/list` | 通知列表 |
+| | `GET /api/notification/unread-count` | 未读数量 |
+| | `PUT /api/notification/read` | 标记已读 |
+| | `PUT /api/notification/read-all` | 全部已读 |
+| **面试** | `POST /api/interview/create` | 创建面试邀请 |
+| | `PUT /api/interview/{id}/status` | 更新面试状态 |
+| | `GET /api/interview/company/list` | 企业面试列表 |
+| | `GET /api/interview/job-seeker/list` | 求职者面试列表 |
+| | `GET /api/interview/{id}` | 面试详情 |
+| | `DELETE /api/interview/{id}` | 删除面试 |
+| **收藏** | `POST /api/favorite/add` | 添加收藏 |
+| | `DELETE /api/favorite/remove` | 取消收藏 |
+| | `GET /api/favorite/list` | 收藏列表 |
+| | `GET /api/favorite/check` | 检查收藏状态 |
+
+---
+
+### 前端请求示例
+```javascript
+// 请求头携带 Token
+headers: {
+  'Authorization': 'Bearer eyJhbGci...'  // 登录时获取的 token
+}
+```
+
+### 401 未授权响应
+未登录或 Token 过期时返回（**HTTP 状态码为 401**）：
+```json
+{
+  "code": 401,
+  "message": "请先登录",
+  "data": null,
+  "timestamp": 1710931200000
+}
+```
+
+---
+
 ## 统一返回格式
 
 ### 成功响应
@@ -531,8 +648,10 @@ Authorization: Bearer {token}
 ### 3.1 获取教育经历列表
 
 - **接口地址**: `GET /api/education/list`
-- **接口描述**: 获取当前用户的所有教育经历
-- **认证**: 需要
+- **接口描述**: 获取教育经历列表
+  - 带 `jobSeekerId` 参数：公开接口，任何人可查看（用于Boss查看候选人）
+  - 不带参数：需要认证，查看自己的教育经历
+- **认证**: 可选（带参数时不需要，不带参数时需要）
 
 #### 请求参数
 
@@ -845,7 +964,7 @@ Content-Type: application/json
 
 - **接口地址**: `GET /api/position/detail?id=1`
 - **接口描述**: 查询指定职位的详细信息（含企业信息）
-- **认证**: 需要
+- **认证**: 不需要
 
 #### 请求参数
 
@@ -935,7 +1054,7 @@ Content-Type: application/json
 
 - **接口地址**: `GET /api/position/list`
 - **接口描述**: 求职者查询招聘中的职位列表，支持筛选
-- **认证**: 需要
+- **认证**: 不需要
 
 #### 请求参数
 
@@ -1038,7 +1157,7 @@ Content-Type: application/json
 
 - **接口地址**: `GET /api/position/company?companyId=1`
 - **接口描述**: 查询指定公司的所有招聘中职位
-- **认证**: 需要
+- **认证**: 不需要
 
 #### 请求参数
 
@@ -1075,7 +1194,7 @@ Content-Type: application/json
 
 - **接口地址**: `GET /api/position/company-info?positionId=1`
 - **接口描述**: 求职者查看指定职位的公司详细信息
-- **认证**: 需要
+- **认证**: 不需要
 
 #### 请求参数
 
@@ -1107,13 +1226,121 @@ Content-Type: application/json
 
 ---
 
+### 4.11 获取最新职位列表（首页推荐）
+
+- **接口地址**: `GET /api/position/latest`
+- **接口描述**: 获取最新发布的职位列表，用于首页推荐
+- **认证**: 不需要
+
+#### 请求参数
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| limit | Integer | 否 | 返回数量限制，默认10 |
+
+#### 返回参数
+
+**成功响应**：
+```json
+{
+  "code": 200,
+  "message": "查询成功",
+  "data": [
+    {
+      "id": 1,
+      "title": "Java高级工程师",
+      "category": "后端开发",
+      "city": "北京",
+      "salaryMin": 20,
+      "salaryMax": 40,
+      "status": 1,
+      "tags": "[\"五险一金\",\"弹性工作\"]",
+      "companyLogo": "https://xxx.oss.com/logo/xxx.png",
+      "companyName": "某某科技有限公司",
+      "createTime": "2024-01-01T10:00:00"
+    }
+  ],
+  "timestamp": 1710931200000
+}
+```
+
+---
+
+### 4.12 获取热门职位列表（首页推荐）
+
+- **接口地址**: `GET /api/position/hot`
+- **接口描述**: 获取热门职位列表（按薪资倒序），用于首页推荐
+- **认证**: 不需要
+
+#### 请求参数
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| limit | Integer | 否 | 返回数量限制，默认10 |
+
+#### 返回参数
+
+**成功响应**：与4.11相同
+
+---
+
+### 4.13 获取职位详情（含公司信息）
+
+- **接口地址**: `GET /api/position/detail-with-company?id=1`
+- **接口描述**: 求职者查看职位详情，同时返回公司信息
+- **认证**: 不需要
+
+#### 请求参数
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| id | Long | 是 | 职位ID |
+
+#### 返回参数
+
+**成功响应**：
+```json
+{
+  "code": 200,
+  "message": "查询成功",
+  "data": {
+    "position": {
+      "id": 1,
+      "title": "Java高级工程师",
+      "category": "后端开发",
+      "city": "北京",
+      "salaryMin": 20,
+      "salaryMax": 40,
+      "description": "岗位职责...",
+      "requirement": "任职要求...",
+      "tags": "[\"五险一金\",\"弹性工作\"]"
+    },
+    "company": {
+      "id": 1,
+      "companyName": "某某科技有限公司",
+      "logo": "https://xxx.oss.com/logo/xxx.png",
+      "industry": "互联网",
+      "scale": 3,
+      "financingStage": 4,
+      "city": "北京",
+      "description": "企业简介..."
+    }
+  },
+  "timestamp": 1710931200000
+}
+```
+
+---
+
 ## 六、经历模块
 
 ### 6.1 获取工作/实习经历列表
 
 - **接口地址**: `GET /api/experience/list`
-- **接口描述**: 获取当前用户的所有工作/实习经历
-- **认证**: 需要
+- **接口描述**: 获取工作/实习经历列表
+  - 带 `jobSeekerId` 参数：公开接口，任何人可查看（用于Boss查看候选人）
+  - 不带参数：需要认证，查看自己的工作经历
+- **认证**: 可选（带参数时不需要，不带参数时需要）
 
 #### 请求参数
 
@@ -1296,8 +1523,10 @@ Authorization: Bearer {token}
 ### 7.1 获取项目经历列表
 
 - **接口地址**: `GET /api/project/list`
-- **接口描述**: 获取当前用户的所有项目经历
-- **认证**: 需要
+- **接口描述**: 获取项目经历列表
+  - 带 `jobSeekerId` 参数：公开接口，任何人可查看（用于Boss查看候选人）
+  - 不带参数：需要认证，查看自己的项目经历
+- **认证**: 可选（带参数时不需要，不带参数时需要）
 
 #### 请求参数
 
@@ -1642,6 +1871,46 @@ Authorization: Bearer {token}
 
 ---
 
+### 3.4 根据公司ID查询企业信息
+
+- **接口地址**: `GET /api/company/{id}`
+- **接口描述**: 求职者查看指定公司的详细信息（用于公司详情页）
+- **认证**: 不需要
+
+#### 请求参数
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| id | Long | 是 | 公司ID（路径参数） |
+
+#### 返回参数
+
+**成功响应**：
+```json
+{
+  "code": 200,
+  "message": "查询成功",
+  "data": {
+    "id": 1,
+    "companyName": "某某科技有限公司",
+    "logo": "https://xxx.oss.com/logo/xxx.png",
+    "industry": "互联网",
+    "scale": 3,
+    "financingStage": 4,
+    "city": "北京",
+    "address": "朝阳区建国路88号",
+    "email": "hr@example.com",
+    "phone": "010-12345678",
+    "website": "https://www.example.com",
+    "description": "企业简介...",
+    "welfare": "[\"六险一金\",\"带薪年假\"]"
+  },
+  "timestamp": 1710931200000
+}
+```
+
+---
+
 ## 六、文件上传模块
 
 ### 6.1 上传文件
@@ -1777,12 +2046,70 @@ Authorization: Bearer {token}
 |--------|------|
 | 200 | 成功 |
 | 400 | 请求参数错误 / 业务逻辑错误 |
-| 401 | 未授权（JWT令牌无效或过期） |
-| 403 | 无权访问 |
+| 401 | 未授权（JWT令牌无效或过期、未登录） |
+| 403 | 无权访问（权限不足、操作他人资源） |
 | 404 | 资源不存在 |
 | 500 | 服务器内部错误 |
 
-### 业务错误码（code=400时message字段）
+### 业务错误码（各状态下message字段）
+
+#### code=401 未授权
+| 错误消息 | 说明 |
+|----------|------|
+| 请先登录 | 用户未登录，未携带Token |
+| 登录已过期，请重新登录 | Token无效或过期 |
+| 用户不存在 | Token中的用户ID不存在 |
+
+#### code=403 禁止访问
+| 错误消息 | 说明 |
+|----------|------|
+| 只有求职者才能投递简历 | 非求职者角色尝试投递 |
+| 只有企业HR才能查看投递列表 | 非企业HR角色尝试查看投递 |
+| 只有求职者才能查看投递记录 | 非求职者角色尝试查看投递 |
+| 只有企业HR才能发布职位 | 非企业HR角色尝试发布职位 |
+| 只有企业HR才能更新职位 | 非企业HR角色尝试更新职位 |
+| 只有企业HR才能删除职位 | 非企业HR角色尝试删除职位 |
+| 只有企业HR才能管理职位 | 非企业HR角色尝试管理职位 |
+| 只有企业HR才能访问企业管理 | 非企业HR角色尝试访问企业管理 |
+| 只有企业HR才能更新企业信息 | 非企业HR角色尝试更新企业信息 |
+| 只有企业HR才能上传logo | 非企业HR角色尝试上传logo |
+| 只有企业HR才能上传营业执照 | 非企业HR角色尝试上传营业执照 |
+| 只有求职者才能访问简历信息 | 非求职者角色尝试访问简历信息 |
+| 只有求职者才能更新简历信息 | 非求职者角色尝试更新简历信息 |
+| 只有求职者才能上传头像 | 非求职者角色尝试上传头像 |
+| 只有求职者才能上传简历 | 非求职者角色尝试上传简历 |
+| 只有求职者才能查看头像 | 非求职者角色尝试查看头像 |
+| 只有求职者才能查看简历 | 非求职者角色尝试查看简历 |
+| 无权修改其他用户的信息 | 尝试修改非自己的求职者信息 |
+| 无权修改其他企业的信息 | 尝试修改非自己的企业信息 |
+| 无权修改他人的工作经历 | 尝试修改非自己的工作经历 |
+| 无权修改他人的项目经历 | 尝试修改非自己的项目经历 |
+| 无权修改他人的教育经历 | 尝试修改非自己的教育经历 |
+| 无权删除他人的项目 | 尝试删除他人的项目经历 |
+| 无权删除他人的教育经历 | 尝试删除他人的教育经历 |
+| 无权删除他人的经历 | 尝试删除他人的工作经历 |
+| 无权删除其他人的职位 | 尝试删除他人发布的职位 |
+| 无权操作其他人的职位 | 尝试修改他人发布的职位 |
+| 无权查看此投递 | 尝试查看他人的投递记录 |
+| 无权更新此投递状态 | 尝试更新他人的投递状态 |
+| 无权查看此投递的求职者信息 | 尝试查看非自己收到的投递的候选人信息 |
+| 无权操作此通知 | 尝试操作他人的通知 |
+
+#### code=400 业务错误
+| 错误消息 | 说明 |
+|----------|------|
+| 手机号格式不正确 | 手机号不是以1开头的11位数字 |
+| 角色参数错误 | role值不是1或2 |
+| 验证码已过期或不存在 | 验证码超过5分钟有效期或未获取验证码 |
+| 验证码错误 | 验证码输入错误 |
+| 用户不存在 | 该手机号未注册 |
+| 当前角色与目标角色相同，无需切换 | 尝试切换到相同的角色 |
+| 企业信息不存在 | 调用企业接口前需先完善企业信息 |
+| 求职者信息不存在 | 调用求职者接口前需先完善个人信息 |
+| 不支持的文件类型 | fileType参数不在允许范围内（avatar/resume/logo/license） |
+| 文件大小超过限制 | 超过允许的最大文件大小 |
+| 文件格式不支持 | 文件MIME类型不在允许范围内 |
+| 文件上传失败，请稍后重试 | 服务器处理文件时发生错误 |
 
 | 错误消息 | 说明 |
 |----------|------|
@@ -1802,7 +2129,413 @@ Authorization: Bearer {token}
 
 ---
 
-## 十、接口调用示例
+## 十、面试管理模块
+
+### 10.1 创建面试邀请
+
+- **接口地址**: `POST /api/interview/create`
+- **接口描述**: 创建面试邀请
+- **认证**: 需要（仅企业HR角色）
+
+#### 请求参数
+
+**Headers**：
+```
+Content-Type: application/json
+Authorization: Bearer {token}
+```
+
+**Body（JSON）**：
+```json
+{
+  "applicationId": 1,
+  "interviewTime": "2024-01-01T14:00:00",
+  "interviewType": 1,
+  "interviewAddress": "北京市朝阳区建国路88号",
+  "interviewLink": "",
+  "remark": "请携带身份证和简历"
+}
+```
+
+**参数说明**：
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| applicationId | Long | 是 | 关联投递ID |
+| interviewTime | LocalDateTime | 是 | 面试时间 |
+| interviewType | Integer | 是 | 面试类型：1-线下，2-线上，3-AI面试 |
+| interviewAddress | String | 否 | 面试地址（线下） |
+| interviewLink | String | 否 | 面试链接（线上） |
+| remark | String | 否 | 备注 |
+
+#### 返回参数
+
+**成功响应**：
+```json
+{
+  "code": 200,
+  "message": "创建面试邀请成功",
+  "data": 1,
+  "timestamp": 1710931200000
+}
+```
+
+**返回数据字段说明**：
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| data | Long | 面试ID |
+
+---
+
+### 10.2 更新面试状态
+
+- **接口地址**: `PUT /api/interview/{id}/status`
+- **接口描述**: 更新面试状态
+- **认证**: 需要
+
+#### 请求参数
+
+**Headers**：
+```
+Authorization: Bearer {token}
+```
+
+**Query参数**：
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| status | Integer | 是 | 状态：2-已确认，3-已拒绝，4-已完成 |
+
+#### 返回参数
+
+**成功响应**：
+```json
+{
+  "code": 200,
+  "message": "更新面试状态成功",
+  "data": null,
+  "timestamp": 1710931200000
+}
+```
+
+---
+
+### 10.3 获取企业面试列表
+
+- **接口地址**: `GET /api/interview/company/list`
+- **接口描述**: 获取企业的面试列表
+- **认证**: 需要（仅企业HR角色）
+
+#### 请求参数
+
+**Headers**：
+```
+Authorization: Bearer {token}
+```
+
+#### 返回参数
+
+**成功响应**：
+```json
+{
+  "code": 200,
+  "message": "获取面试列表成功",
+  "data": [
+    {
+      "id": 1,
+      "applicationId": 1,
+      "jobSeekerId": 1,
+      "jobSeekerName": "张三",
+      "positionId": 1,
+      "positionTitle": "Java高级工程师",
+      "companyId": 1,
+      "companyName": "某某科技有限公司",
+      "interviewTime": "2024-01-01T14:00:00",
+      "interviewType": 1,
+      "interviewTypeName": "线下面试",
+      "interviewAddress": "北京市朝阳区建国路88号",
+      "interviewLink": "",
+      "status": 1,
+      "statusName": "待确认",
+      "remark": "请携带身份证和简历",
+      "createTime": "2024-01-01T10:00:00",
+      "updateTime": "2024-01-01T10:00:00"
+    }
+  ],
+  "timestamp": 1710931200000
+}
+```
+
+---
+
+### 10.4 获取求职者面试列表
+
+- **接口地址**: `GET /api/interview/job-seeker/list`
+- **接口描述**: 获取求职者的面试列表
+- **认证**: 需要（仅求职者角色）
+
+#### 请求参数
+
+**Headers**：
+```
+Authorization: Bearer {token}
+```
+
+#### 返回参数
+
+**成功响应**：
+```json
+{
+  "code": 200,
+  "message": "获取面试列表成功",
+  "data": [
+    {
+      "id": 1,
+      "applicationId": 1,
+      "jobSeekerId": 1,
+      "jobSeekerName": "张三",
+      "positionId": 1,
+      "positionTitle": "Java高级工程师",
+      "companyId": 1,
+      "companyName": "某某科技有限公司",
+      "interviewTime": "2024-01-01T14:00:00",
+      "interviewType": 1,
+      "interviewTypeName": "线下面试",
+      "interviewAddress": "北京市朝阳区建国路88号",
+      "interviewLink": "",
+      "status": 1,
+      "statusName": "待确认",
+      "remark": "请携带身份证和简历",
+      "createTime": "2024-01-01T10:00:00",
+      "updateTime": "2024-01-01T10:00:00"
+    }
+  ],
+  "timestamp": 1710931200000
+}
+```
+
+---
+
+### 10.5 获取面试详情
+
+- **接口地址**: `GET /api/interview/{id}`
+- **接口描述**: 获取面试详情
+- **认证**: 需要
+
+#### 请求参数
+
+**Headers**：
+```
+Authorization: Bearer {token}
+```
+
+#### 返回参数
+
+**成功响应**：
+```json
+{
+  "code": 200,
+  "message": "获取面试详情成功",
+  "data": {
+    "id": 1,
+    "applicationId": 1,
+    "jobSeekerId": 1,
+    "jobSeekerName": "张三",
+    "positionId": 1,
+    "positionTitle": "Java高级工程师",
+    "companyId": 1,
+    "companyName": "某某科技有限公司",
+    "interviewTime": "2024-01-01T14:00:00",
+    "interviewType": 1,
+    "interviewTypeName": "线下面试",
+    "interviewAddress": "北京市朝阳区建国路88号",
+    "interviewLink": "",
+    "status": 1,
+    "statusName": "待确认",
+    "remark": "请携带身份证和简历",
+    "createTime": "2024-01-01T10:00:00",
+    "updateTime": "2024-01-01T10:00:00"
+  },
+  "timestamp": 1710931200000
+}
+```
+
+---
+
+### 10.6 删除面试
+
+- **接口地址**: `DELETE /api/interview/{id}`
+- **接口描述**: 删除面试
+- **认证**: 需要（仅企业HR角色）
+
+#### 请求参数
+
+**Headers**：
+```
+Authorization: Bearer {token}
+```
+
+#### 返回参数
+
+**成功响应**：
+```json
+{
+  "code": 200,
+  "message": "删除面试成功",
+  "data": null,
+  "timestamp": 1710931200000
+}
+```
+
+---
+
+## 十一、收藏管理模块
+
+### 11.1 添加收藏
+
+- **接口地址**: `POST /api/favorite/add`
+- **接口描述**: 添加收藏
+- **认证**: 需要
+
+#### 请求参数
+
+**Headers**：
+```
+Authorization: Bearer {token}
+```
+
+**Query参数**：
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| targetType | Integer | 是 | 收藏类型：1-职位，2-企业，3-求职者 |
+| targetId | Long | 是 | 目标ID |
+
+#### 返回参数
+
+**成功响应**：
+```json
+{
+  "code": 200,
+  "message": "添加收藏成功",
+  "data": null,
+  "timestamp": 1710931200000
+}
+```
+
+---
+
+### 11.2 取消收藏
+
+- **接口地址**: `DELETE /api/favorite/remove`
+- **接口描述**: 取消收藏
+- **认证**: 需要
+
+#### 请求参数
+
+**Headers**：
+```
+Authorization: Bearer {token}
+```
+
+**Query参数**：
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| targetType | Integer | 是 | 收藏类型：1-职位，2-企业，3-求职者 |
+| targetId | Long | 是 | 目标ID |
+
+#### 返回参数
+
+**成功响应**：
+```json
+{
+  "code": 200,
+  "message": "取消收藏成功",
+  "data": null,
+  "timestamp": 1710931200000
+}
+```
+
+---
+
+### 11.3 获取收藏列表
+
+- **接口地址**: `GET /api/favorite/list`
+- **接口描述**: 获取收藏列表
+- **认证**: 需要
+
+#### 请求参数
+
+**Headers**：
+```
+Authorization: Bearer {token}
+```
+
+**Query参数**：
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| targetType | Integer | 是 | 收藏类型：1-职位，2-企业，3-求职者 |
+
+#### 返回参数
+
+**成功响应**：
+```json
+{
+  "code": 200,
+  "message": "获取收藏列表成功",
+  "data": [
+    {
+      "id": 1,
+      "userId": 1,
+      "targetType": 1,
+      "targetId": 1,
+      "createTime": "2024-01-01T10:00:00"
+    }
+  ],
+  "timestamp": 1710931200000
+}
+```
+
+---
+
+### 11.4 检查收藏状态
+
+- **接口地址**: `GET /api/favorite/check`
+- **接口描述**: 检查是否已收藏
+- **认证**: 需要
+
+#### 请求参数
+
+**Headers**：
+```
+Authorization: Bearer {token}
+```
+
+**Query参数**：
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| targetType | Integer | 是 | 收藏类型：1-职位，2-企业，3-求职者 |
+| targetId | Long | 是 | 目标ID |
+
+#### 返回参数
+
+**成功响应**：
+```json
+{
+  "code": 200,
+  "message": "检查收藏状态成功",
+  "data": {
+    "isFavorite": true
+  },
+  "timestamp": 1710931200000
+}
+```
+
+## 十二、接口调用示例
 
 ### 完整业务流程示例
 
@@ -1894,8 +2627,11 @@ curl -X PUT http://localhost:8080/api/job-seeker/update \
       {
         "id": 1,
         "jobSeekerId": 1,
+        "jobSeekerName": "张三",
         "positionId": 1,
+        "positionTitle": "Java开发工程师",
         "companyId": 1,
+        "companyName": "某某科技有限公司",
         "bossId": 2,
         "status": 1,
         "aiScore": null,
@@ -1939,7 +2675,9 @@ curl -X PUT http://localhost:8080/api/job-seeker/update \
         "id": 1,
         "jobSeekerId": 1,
         "positionId": 1,
+        "positionTitle": "Java开发工程师",
         "companyId": 1,
+        "companyName": "某某科技有限公司",
         "bossId": 2,
         "status": 1,
         "createTime": "2024-01-01T10:00:00"
@@ -1978,8 +2716,11 @@ curl -X PUT http://localhost:8080/api/job-seeker/update \
     "application": {
       "id": 1,
       "jobSeekerId": 1,
+      "jobSeekerName": "张三",
       "positionId": 1,
+      "positionTitle": "Java开发工程师",
       "companyId": 1,
+      "companyName": "某某科技有限公司",
       "bossId": 2,
       "status": 2,
       "createTime": "2024-01-01T10:00:00",
@@ -2075,11 +2816,11 @@ curl -X PUT http://localhost:8080/api/job-seeker/update \
 
 ---
 
-### 11.7 Boss查看求职者信息（简历）
+### 11.7 Boss查看求职者简要信息
 
-- **接口地址**: `GET /api/application/job-seeker?id=1`
-- **接口描述**: Boss查看投递者对应的求职者信息（含简历URL）
-- **认证**: 需要（仅Boss角色）
+- **接口地址**: `GET /api/application/job-seeker/simple?id=1`
+- **接口描述**: Boss查看投递者对应的求职者简要信息（含简历URL）
+- **认证**: 需要（仅Boss角色，且只能查看自己收到的投递）
 
 #### 请求参数
 
@@ -2165,6 +2906,87 @@ curl -X PUT http://localhost:8080/api/job-seeker/update \
   "timestamp": 1710931200000
 }
 ```
+
+---
+
+### 11.10 Boss查看求职者完整在线简历
+
+- **接口地址**: `GET /api/application/job-seeker/resume?id=1`
+- **接口描述**: Boss查看求职者的完整在线简历，包含基本信息、教育经历、工作经历、项目经历
+- **认证**: 需要（仅Boss角色，且只能查看自己收到的投递）
+
+#### 请求参数
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| id | Long | 是 | 投递记录ID |
+
+#### 返回参数
+
+**成功响应**：
+```json
+{
+  "code": 200,
+  "message": "查询成功",
+  "data": {
+    "jobSeeker": {
+      "id": 1,
+      "name": "张三",
+      "gender": 1,
+      "avatar": "https://xxx.oss.com/avatar/xxx.jpg",
+      "phone": "13800138000",
+      "email": "zhangsan@example.com",
+      "age": 28,
+      "workYears": 5,
+      "city": "北京",
+      "introduction": "热爱技术，善于学习",
+      "skills": "[\"Java\",\"Spring\",\"MySQL\"]",
+      "resumeUrl": "https://xxx.oss.com/resume/xxx.pdf",
+      "createTime": "2024-01-01T10:00:00"
+    },
+    "educations": [
+      {
+        "id": 1,
+        "schoolName": "清华大学",
+        "major": "计算机科学与技术",
+        "educationLevel": 4,
+        "startDate": "2015-09-01",
+        "endDate": "2019-06-30",
+        "description": "GPA 3.8/4.0"
+      }
+    ],
+    "experiences": [
+      {
+        "id": 1,
+        "companyName": "某某科技有限公司",
+        "companyIndustry": "互联网",
+        "position": "Java高级工程师",
+        "startDate": "2020-01-01",
+        "endDate": "2024-01-01",
+        "description": "负责后端系统架构设计与开发",
+        "isInternship": 0
+      }
+    ],
+    "projects": [
+      {
+        "id": 1,
+        "projectName": "智能招聘平台",
+        "projectRole": "技术负责人",
+        "startDate": "2023-01-01",
+        "endDate": "2023-12-31",
+        "description": "基于AI的简历筛选与推荐系统"
+      }
+    ]
+  },
+  "timestamp": 1710931200000
+}
+```
+
+**说明**：
+- 调用此接口会自动将投递状态更新为"已查看"
+- educations 按毕业时间倒序排列
+- experiences 按结束时间倒序排列
+- projects 按结束时间倒序排列
 
 ---
 
@@ -2289,7 +3111,8 @@ curl -X PUT http://localhost:8080/api/job-seeker/update \
 ## 十三、注意事项
 
 1. **验证码有效期**：验证码有效期为5分钟，超过时间需要重新获取
-2. **JWT令牌**：除登录相关接口外，其他接口都需要在请求头中携带JWT令牌
+2. **JWT令牌**：需要认证的接口需要在请求头中携带 `Authorization: Bearer <token>`
 3. **文件上传**：上传文件前需要先调用文件上传接口获取URL，然后将URL传给对应的业务接口
-4. **角色权限**：求职者只能访问 `/api/job-seeker/*` 和 `/api/file/*` 接口，企业HR只能访问 `/api/company/*` 和 `/api/file/*` 接口
-5. **自动创建**：首次登录时，系统会自动创建用户和相关业务信息（如job_seeker或company记录）
+4. **自动创建**：首次登录时，系统会自动创建用户和相关业务信息（如job_seeker或company记录）
+5. **查看自己简历**：登录后查看自己的简历，调用 `/api/job-seeker/info` 接口即可获取完整信息（包含基本信息、教育经历、工作经历、项目经历）
+6. **Boss查看候选人**：Boss通过投递记录查看候选人的简历信息，使用 `/api/application/job-seeker/resume?id=1` 接口

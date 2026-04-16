@@ -4,10 +4,13 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.airecruitmentbackend.entity.Application;
 import com.example.airecruitmentbackend.entity.JobSeeker;
+import com.example.airecruitmentbackend.entity.Company;
 import com.example.airecruitmentbackend.entity.Notification;
 import com.example.airecruitmentbackend.entity.Position;
 import com.example.airecruitmentbackend.exception.BusinessException;
+import com.example.airecruitmentbackend.exception.ForbiddenException;
 import com.example.airecruitmentbackend.mapper.ApplicationMapper;
+import com.example.airecruitmentbackend.mapper.CompanyMapper;
 import com.example.airecruitmentbackend.mapper.JobSeekerMapper;
 import com.example.airecruitmentbackend.mapper.PositionMapper;
 import com.example.airecruitmentbackend.service.ApplicationService;
@@ -30,6 +33,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     private final ApplicationMapper applicationMapper;
     private final PositionMapper positionMapper;
     private final JobSeekerMapper jobSeekerMapper;
+    private final CompanyMapper companyMapper;
     private final NotificationService notificationService;
 
     @Override
@@ -60,6 +64,13 @@ public class ApplicationServiceImpl implements ApplicationService {
         application.setPositionId(positionId);
         application.setCompanyId(position.getCompanyId());
         application.setBossId(position.getBossId());
+        // 填充冗余字段，方便前端展示
+        application.setJobSeekerName(jobSeeker.getName());
+        // 查询企业名称
+        Company company = companyMapper.selectById(position.getCompanyId());
+        application.setCompanyName(company != null ? company.getCompanyName() : null);
+        // 填充职位名称冗余字段
+        application.setPositionTitle(position.getTitle());
         application.setStatus(1); // 待查看
         application.setCreateTime(LocalDateTime.now());
         application.setUpdateTime(LocalDateTime.now());
@@ -115,7 +126,7 @@ public class ApplicationServiceImpl implements ApplicationService {
             throw new BusinessException("投递记录不存在");
         }
         if (!application.getBossId().equals(bossId)) {
-            throw new BusinessException("无权查看此投递");
+            throw new ForbiddenException("无权查看此投递");
         }
         // 更新为已查看状态
         application.setStatus(2);
@@ -136,7 +147,7 @@ public class ApplicationServiceImpl implements ApplicationService {
             throw new BusinessException("投递记录不存在");
         }
         if (!application.getBossId().equals(bossId)) {
-            throw new BusinessException("无权更新此投递状态");
+            throw new ForbiddenException("无权更新此投递状态");
         }
         application.setStatus(status);
         application.setUpdateTime(LocalDateTime.now());
@@ -160,9 +171,8 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     @Override
     public boolean hasApplied(Long jobSeekerId, Long positionId) {
-        LambdaQueryWrapper<Application> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Application::getJobSeekerId, jobSeekerId)
-               .eq(Application::getPositionId, positionId);
-        return applicationMapper.selectCount(wrapper) > 0;
+        return applicationMapper.selectCount(new LambdaQueryWrapper<Application>()
+                .eq(Application::getJobSeekerId, jobSeekerId)
+                .eq(Application::getPositionId, positionId)) > 0;
     }
 }

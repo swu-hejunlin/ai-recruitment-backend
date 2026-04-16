@@ -11,194 +11,41 @@
 - [x] JWT认证机制
 - [x] 验证码管理（Redis）
 
+### 2. 求职者模块（基础 CRUD）
+- [x] 个人信息管理（查看/编辑）
+- [x] 教育经历管理
+- [x] 工作经历管理
+- [x] 项目经历管理
+- [x] 职位浏览与搜索
+- [x] 简历投递功能
+
+### 3. 企业HR模块（基础 CRUD）
+- [x] 企业信息管理
+- [x] 岗位发布与管理
+- [x] 简历投递管理（查看/处理）
+
 ---
 
 ## 待开发模块 ⬜
 
-### 2. 求职者模块（7个子模块）
+### 4. 增强功能模块
+- [ ] 收藏管理
+- [ ] 系统消息通知（实时推送预留）
+- [ ] 投递状态流转的高级交互
 
-#### 2.1 个人信息管理
-**功能需求**：
-- 查看个人信息
-- 编辑基本信息（姓名、性别、年龄、学历等）
-- 上传头像
-
-**接口设计**：
-```
-GET    /api/jobseeker/profile      # 获取个人信息
-PUT    /api/jobseeker/profile      # 更新个人信息
-POST   /api/jobseeker/avatar      # 上传头像
-GET    /api/jobseeker/avatar      # 获取头像
-```
-
-#### 2.2 简历管理
-**功能需求**：
-- 创建简历（手动填写）
-- 编辑简历
-- 删除简历
-- 简历列表展示
-- 简历详情查看
-- 简历设置为默认
-
-**接口设计**：
-```
-GET    /api/jobseeker/resumes         # 获取简历列表
-POST   /api/jobseeker/resumes         # 创建简历
-GET    /api/jobseeker/resumes/{id}    # 获取简历详情
-PUT    /api/jobseeker/resumes/{id}    # 更新简历
-DELETE  /api/jobseeker/resumes/{id}    # 删除简历
-PUT    /api/jobseeker/resumes/{id}/set-default  # 设置默认简历
-```
-
-**简历信息结构**：
-- 基本信息（姓名、联系方式）
-- 教育经历
-- 工作经验
-- 技能标签
-- 自我介绍
-
-#### 2.3 职位浏览
-**功能需求**：
-- 职位列表展示（分页）
-- 职位搜索（关键词、地点、薪资范围）
-- 职位筛选（行业、全职/兼职）
-- 职位详情查看
-
-**接口设计**：
-```
-GET    /api/jobseeker/jobs?page=1&size=10                    # 职位列表（分页）
-GET    /api/jobseeker/jobs/search?keyword=Java&city=北京     # 搜索职位
-GET    /api/jobseeker/jobs/{id}                             # 职位详情
-GET    /api/jobseeker/jobs/hot                               # 热门职位
-```
-
-#### 2.4 简历投递
-**功能需求**：
-- 投递简历给企业
-- 查看投递记录
-- 撤销投递
-- 投递状态查看
-
-**接口设计**：
-```
-POST   /api/jobseeker/applications          # 投递简历
-GET    /api/jobseeker/applications          # 获取投递记录
-GET    /api/jobseeker/applications/{id}     # 获取投递详情
-DELETE  /api/jobseeker/applications/{id}     # 撤销投递
-```
-
-**投递状态流转**：
-- 待处理 → 已查看 → 面试邀请 → 录用/拒绝
-
-#### 2.5 面试管理
-**功能需求**：
-- 查看面试邀请
-- 接受/拒绝面试邀请
-- 查看面试记录
-
-**接口设计**：
-```
-GET    /api/jobseeker/interviews           # 查看面试邀请
-POST   /api/jobseeker/interviews/{id}/accept  # 接受面试
-POST   /api/jobseeker/interviews/{id}/reject  # 拒绝面试
-GET    /api/jobseeker/interviews/history      # 面试记录
-```
-
-#### 2.6 收藏管理
-**功能需求**：
-- 收藏职位
-- 取消收藏
-- 查看收藏列表
-
-**接口设计**：
-```
-POST   /api/jobseeker/favorites/jobs/{jobId}      # 收藏职位
-DELETE  /api/jobseeker/favorites/jobs/{jobId}      # 取消收藏
-GET    /api/jobseeker/favorites                 # 收藏列表
-```
-
-#### 2.7 消息通知
-**功能需求**：
-- 查看系统通知
-- 消息已读/未读状态
-- 删除消息
-
-**接口设计**：
-```
-GET    /api/jobseeker/notifications             # 获取通知列表
-PUT    /api/jobseeker/notifications/{id}/read  # 标记已读
-DELETE  /api/jobseeker/notifications/{id}      # 删除通知
-```
+### 5. 第二阶段：AI 智能模块（核心重点）
+- [ ] **简历智能解析 (LLM)**：支持 PDF/Word 自动解析
+- [ ] **人岗智能匹配 (Embedding)**：语义匹配算法
+- [ ] **AI 面试官**：智能对话初筛
+- [ ] **实时 WebSocket 通信**：消息反馈与通知
 
 ---
 
-### 3. 企业HR模块（6个子模块）
-
-#### 3.1 企业信息管理
-**功能需求**：
-- 查看企业信息
-- 编辑企业信息（公司名称、简介、规模、地址等）
-- 上传企业Logo
-
-**接口设计**：
-```
-GET    /api/enterprise/info         # 获取企业信息
-PUT    /api/enterprise/info         # 更新企业信息
-POST   /api/enterprise/logo        # 上传Logo
-GET    /api/enterprise/logo        # 获取Logo
-```
-
-#### 3.2 岗位管理
-**功能需求**：
-- 发布岗位
-- 编辑岗位
-- 删除岗位
-- 岗位列表展示
-- 岗位详情查看
-- 岗位上下架
-
-**接口设计**：
-```
-GET    /api/enterprise/jobs                   # 获取岗位列表
-POST   /api/enterprise/jobs                   # 发布岗位
-GET    /api/enterprise/jobs/{id}              # 获取岗位详情
-PUT    /api/enterprise/jobs/{id}              # 更新岗位
-DELETE  /api/enterprise/jobs/{id}              # 删除岗位
-PUT    /api/enterprise/jobs/{id}/status      # 岗位上下架
-```
-
-**岗位信息结构**：
-- 基本信息（岗位名称、薪资范围、地点、学历要求）
-- 岗位描述（岗位职责、任职要求）
-- 福利待遇
-- 招聘人数
-- 岗位标签（技能要求）
-
-#### 3.3 简历管理（接收投递）
-**功能需求**：
-- 查看投递列表
-- 查看简历详情
-- 标记投递状态（已查看、面试、录用、拒绝）
-
-**接口设计**：
-```
-GET    /api/enterprise/applications          # 获取投递列表
-GET    /api/enterprise/applications/{id}     # 获取投递详情（含简历）
-PUT    /api/enterprise/applications/{id}/status  # 更新投递状态
-```
-
-**投递状态**：
-- `VIEWED` - 已查看
-- `INTERVIEW` - 面试中
-- `HIRED` - 已录用
-- `REJECTED` - 已拒绝
-
-#### 3.4 面试管理
-**功能需求**：
-- 发送面试邀请
-- 查看面试邀请记录
-- 取消面试邀请
-
+## 最近优化记录 🛠️
+- [x] **修复身份切换 Bug**：在 `switchRole` 时自动补全对应的基础信息记录，避免空指针。
+- [x] **增强权限校验**：完善 `JwtAuthenticationFilter` 的 CORS 处理和白名单配置。
+- [x] **UI/UX 升级**：整体重构前端布局，提升视觉档次和交互友好度。
+- [x] **代码瘦身**：清理冗余拦截器和重复常量类。
 **接口设计**：
 ```
 POST   /api/enterprise/interviews                 # 发送面试邀请

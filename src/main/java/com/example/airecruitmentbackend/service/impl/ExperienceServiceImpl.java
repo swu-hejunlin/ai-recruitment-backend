@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.airecruitmentbackend.entity.Experience;
 import com.example.airecruitmentbackend.exception.BusinessException;
+import com.example.airecruitmentbackend.exception.ForbiddenException;
 import com.example.airecruitmentbackend.mapper.ExperienceMapper;
 import com.example.airecruitmentbackend.service.ExperienceService;
 import lombok.RequiredArgsConstructor;
@@ -73,7 +74,7 @@ public class ExperienceServiceImpl extends ServiceImpl<ExperienceMapper, Experie
             throw new BusinessException("经历不存在");
         }
         if (jobSeekerId != null && !experience.getJobSeekerId().equals(jobSeekerId)) {
-            throw new BusinessException("无权删除他人的经历");
+            throw new ForbiddenException("无权删除他人的经历");
         }
         boolean success = removeById(id);
         log.info("删除工作/实习经历成功：id={}", id);

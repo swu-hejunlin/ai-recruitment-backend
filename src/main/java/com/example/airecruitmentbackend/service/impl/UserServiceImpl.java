@@ -107,9 +107,8 @@ public class UserServiceImpl implements UserService {
         }
 
         // 查询用户是否存在（只按手机号查询，因为手机号唯一）
-        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(User::getPhone, phone);
-        User user = userMapper.selectOne(wrapper);
+        User user = userMapper.selectOne(new LambdaQueryWrapper<User>()
+                .eq(User::getPhone, phone));
 
         // 用户不存在则自动注册
         if (user == null) {
@@ -168,9 +167,8 @@ public class UserServiceImpl implements UserService {
         }
 
         // 查询用户
-        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(User::getPhone, phone);
-        User user = userMapper.selectOne(wrapper);
+        User user = userMapper.selectOne(new LambdaQueryWrapper<User>()
+                .eq(User::getPhone, phone));
 
         if (user == null) {
             throw new BusinessException(400, "用户不存在");
@@ -188,6 +186,30 @@ public class UserServiceImpl implements UserService {
         user.setRole(role);
         user.setUpdateTime(LocalDateTime.now());
         userMapper.updateById(user);
+
+        // 检查并创建对应的初始数据记录（如果不存在）
+        if (role == 1) {
+            JobSeeker jobSeeker = jobSeekerMapper.selectOne(new LambdaQueryWrapper<JobSeeker>()
+                    .eq(JobSeeker::getUserId, user.getId()));
+            if (jobSeeker == null) {
+                jobSeeker = new JobSeeker();
+                jobSeeker.setUserId(user.getId());
+                jobSeeker.setPhone(phone);
+                jobSeeker.setName("求职者_" + phone);
+                jobSeekerMapper.insert(jobSeeker);
+                log.info("角色切换：自动创建求职者初始信息，userId={}", user.getId());
+            }
+        } else if (role == 2) {
+            Company company = companyMapper.selectOne(new LambdaQueryWrapper<Company>()
+                    .eq(Company::getUserId, user.getId()));
+            if (company == null) {
+                company = new Company();
+                company.setUserId(user.getId());
+                company.setCompanyName("企业_" + phone);
+                companyMapper.insert(company);
+                log.info("角色切换：自动创建企业初始信息，userId={}", user.getId());
+            }
+        }
 
         log.info("用户角色切换成功：userId={}, phone={}, 原角色={}, 新角色={}",
                 user.getId(), phone, role == 1 ? 2 : 1, role);
@@ -231,22 +253,36 @@ public class UserServiceImpl implements UserService {
 
         userMapper.insert(user);
 
-        // 根据角色自动创建对应的初始数据记录
+        // 根据角色自动创建对应的初始数据记录（如果不存在）
         if (role == 1) {
-            // 创建空的求职者信息记录，设置默认用户名
-            JobSeeker jobSeeker = new JobSeeker();
-            jobSeeker.setUserId(user.getId());
-            jobSeeker.setPhone(phone); // 默认使用注册手机号
-            jobSeeker.setName("求职者_" + phone); // 默认用户名：求职者_手机号
-            jobSeekerMapper.insert(jobSeeker);
-            log.info("自动创建求职者初始信息：jobSeekerId={}, userId={}", jobSeeker.getId(), user.getId());
+            // 检查是否已存在求职者信息记录
+            JobSeeker existingJobSeeker = jobSeekerMapper.selectOne(new LambdaQueryWrapper<JobSeeker>()
+                    .eq(JobSeeker::getUserId, user.getId()));
+            if (existingJobSeeker == null) {
+                // 创建空的求职者信息记录，设置默认用户名
+                JobSeeker jobSeeker = new JobSeeker();
+                jobSeeker.setUserId(user.getId());
+                jobSeeker.setPhone(phone); // 默认使用注册手机号
+                jobSeeker.setName("求职者_" + phone); // 默认用户名：求职者_手机号
+                jobSeekerMapper.insert(jobSeeker);
+                log.info("自动创建求职者初始信息：jobSeekerId={}, userId={}", jobSeeker.getId(), user.getId());
+            } else {
+                log.info("求职者信息记录已存在，跳过创建：userId={}", user.getId());
+            }
         } else if (role == 2) {
-            // 创建空的企业信息记录，设置默认企业名
-            Company company = new Company();
-            company.setUserId(user.getId());
-            company.setCompanyName("企业_" + phone); // 默认企业名：企业_手机号
-            companyMapper.insert(company);
-            log.info("自动创建企业初始信息：companyId={}, userId={}", company.getId(), user.getId());
+            // 检查是否已存在企业信息记录
+            Company existingCompany = companyMapper.selectOne(new LambdaQueryWrapper<Company>()
+                    .eq(Company::getUserId, user.getId()));
+            if (existingCompany == null) {
+                // 创建空的企业信息记录，设置默认企业名
+                Company company = new Company();
+                company.setUserId(user.getId());
+                company.setCompanyName("企业_" + phone); // 默认企业名：企业_手机号
+                companyMapper.insert(company);
+                log.info("自动创建企业初始信息：companyId={}, userId={}", company.getId(), user.getId());
+            } else {
+                log.info("企业信息记录已存在，跳过创建：userId={}", user.getId());
+            }
         }
 
         log.info("自动注册新用户并创建初始数据：userId={}, phone={}, role={}", user.getId(), phone, role);

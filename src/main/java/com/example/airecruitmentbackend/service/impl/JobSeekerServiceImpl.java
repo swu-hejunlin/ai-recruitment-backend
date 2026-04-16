@@ -1,9 +1,12 @@
 package com.example.airecruitmentbackend.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.example.airecruitmentbackend.entity.Application;
 import com.example.airecruitmentbackend.entity.JobSeeker;
 import com.example.airecruitmentbackend.exception.BusinessException;
+import com.example.airecruitmentbackend.mapper.ApplicationMapper;
 import com.example.airecruitmentbackend.mapper.JobSeekerMapper;
 import com.example.airecruitmentbackend.service.JobSeekerService;
 import com.example.airecruitmentbackend.util.OssUtil;
@@ -22,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class JobSeekerServiceImpl extends ServiceImpl<JobSeekerMapper, JobSeeker> implements JobSeekerService {
 
     private final JobSeekerMapper jobSeekerMapper;
+    private final ApplicationMapper applicationMapper;
 
     @Autowired
     OssUtil ossUtil;
@@ -31,12 +35,8 @@ public class JobSeekerServiceImpl extends ServiceImpl<JobSeekerMapper, JobSeeker
         if (userId == null) {
             throw new BusinessException("用户ID不能为空");
         }
-
-        LambdaQueryWrapper<JobSeeker> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(JobSeeker::getUserId, userId);
-        JobSeeker jobSeeker = jobSeekerMapper.selectOne(wrapper);
-
-        return jobSeeker;
+        return jobSeekerMapper.selectOne(new LambdaQueryWrapper<JobSeeker>()
+                .eq(JobSeeker::getUserId, userId));
     }
 
     @Override
@@ -46,9 +46,23 @@ public class JobSeekerServiceImpl extends ServiceImpl<JobSeekerMapper, JobSeeker
             throw new BusinessException("求职者信息或ID不能为空");
         }
 
+        // 查询原信息，用于判断姓名是否变更
+        JobSeeker original = jobSeekerMapper.selectById(jobSeeker.getId());
+        boolean nameChanged = original != null
+                && jobSeeker.getName() != null
+                && !jobSeeker.getName().equals(original.getName());
+
         int rows = jobSeekerMapper.updateById(jobSeeker);
         if (rows == 0) {
             throw new BusinessException("更新求职者信息失败");
+        }
+
+        // 同步更新投递记录中的冗余姓名
+        if (nameChanged) {
+            applicationMapper.update(null, new LambdaUpdateWrapper<Application>()
+                    .eq(Application::getJobSeekerId, jobSeeker.getId())
+                    .set(Application::getJobSeekerName, jobSeeker.getName()));
+            log.info("同步更新投递记录中的求职者姓名：jobSeekerId={}, name={}", jobSeeker.getId(), jobSeeker.getName());
         }
 
         log.info("更新求职者信息成功：id={}", jobSeeker.getId());

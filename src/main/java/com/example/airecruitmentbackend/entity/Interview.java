@@ -4,21 +4,25 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
-
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 投递记录实体类
+ * 面试记录表
  */
 @Data
-@TableName("application")
-public class Application {
+@TableName("interview")
+public class Interview {
+
     /**
-     * 投递ID（主键，自增）
+     * 面试ID
      */
     @TableId(type = IdType.AUTO)
     private Long id;
+
+    /**
+     * 关联投递ID
+     */
+    private Long applicationId;
 
     /**
      * 求职者ID
@@ -31,42 +35,42 @@ public class Application {
     private Long positionId;
 
     /**
-     * 所属企业ID（冗余）
+     * 企业ID
      */
     private Long companyId;
 
     /**
-     * 接收投递的Boss/HR ID（冗余）
+     * 面试时间
      */
-    private Long bossId;
+    private LocalDateTime interviewTime;
 
     /**
-     * 求职者姓名（冗余字段，方便前端展示）
+     * 面试类型：1-线下，2-线上，3-AI面试
      */
-    private String jobSeekerName;
+    private Integer interviewType;
 
     /**
-     * 企业名称（冗余字段，方便前端展示）
+     * 面试地址（线下）
      */
-    private String companyName;
+    private String interviewAddress;
 
     /**
-     * 职位名称（冗余字段，方便前端展示）
+     * 面试链接（线上）
      */
-    private String positionTitle;
+    private String interviewLink;
 
     /**
-     * 投递状态：1-待查看，2-已查看，3-面试中，4-不合适，5-录用
+     * 面试状态：1-待确认，2-已确认，3-已拒绝，4-已完成
      */
     private Integer status;
 
     /**
-     * AI匹配分（0-100）
+     * 备注
      */
-    private BigDecimal aiScore;
+    private String remark;
 
     /**
-     * 投递时间
+     * 创建时间
      */
     private LocalDateTime createTime;
 

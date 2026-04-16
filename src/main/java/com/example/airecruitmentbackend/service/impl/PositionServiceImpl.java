@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.airecruitmentbackend.entity.Company;
 import com.example.airecruitmentbackend.entity.Position;
 import com.example.airecruitmentbackend.exception.BusinessException;
+import com.example.airecruitmentbackend.exception.ForbiddenException;
 import com.example.airecruitmentbackend.mapper.CompanyMapper;
 import com.example.airecruitmentbackend.mapper.PositionMapper;
 import com.example.airecruitmentbackend.service.PositionService;
@@ -35,6 +36,9 @@ public class PositionServiceImpl implements PositionService {
         if (company == null) {
             throw new BusinessException("企业信息不存在");
         }
+        // 填充冗余字段，方便前端展示
+        position.setCompanyLogo(company.getLogo());
+        position.setCompanyName(company.getCompanyName());
         // 默认状态为招聘中
         if (position.getStatus() == null) {
             position.setStatus(1);
@@ -51,6 +55,14 @@ public class PositionServiceImpl implements PositionService {
         if (existing == null) {
             throw new BusinessException("职位不存在");
         }
+        // 如果企业信息变更，同步更新冗余字段
+        if (!existing.getCompanyId().equals(position.getCompanyId())) {
+            Company company = companyMapper.selectById(position.getCompanyId());
+            if (company != null) {
+                position.setCompanyLogo(company.getLogo());
+                position.setCompanyName(company.getCompanyName());
+            }
+        }
         positionMapper.updateById(position);
         log.info("更新职位成功，id：{}", position.getId());
     }
@@ -62,7 +74,7 @@ public class PositionServiceImpl implements PositionService {
             throw new BusinessException("职位不存在");
         }
         if (!position.getBossId().equals(bossId)) {
-            throw new BusinessException("无权删除其他人的职位");
+            throw new ForbiddenException("无权删除其他人的职位");
         }
         positionMapper.deleteById(id);
         log.info("删除职位成功，id：{}", id);
@@ -82,10 +94,9 @@ public class PositionServiceImpl implements PositionService {
     @Override
     public Page<Position> getPositionsByBoss(Long bossId, int pageNum, int pageSize) {
         Page<Position> page = new Page<>(pageNum, pageSize);
-        LambdaQueryWrapper<Position> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Position::getBossId, bossId)
-               .orderByDesc(Position::getCreateTime);
-        Page<Position> result = positionMapper.selectPage(page, wrapper);
+        Page<Position> result = positionMapper.selectPage(page, new LambdaQueryWrapper<Position>()
+                .eq(Position::getBossId, bossId)
+                .orderByDesc(Position::getCreateTime));
         // 补充企业信息
         for (Position p : result.getRecords()) {
             enrichCompanyInfo(p);
@@ -127,7 +138,7 @@ public class PositionServiceImpl implements PositionService {
             throw new BusinessException("职位不存在");
         }
         if (!position.getBossId().equals(bossId)) {
-            throw new BusinessException("无权操作其他人的职位");
+            throw new ForbiddenException("无权操作其他人的职位");
         }
         position.setStatus(0);
         positionMapper.updateById(position);
@@ -141,7 +152,7 @@ public class PositionServiceImpl implements PositionService {
             throw new BusinessException("职位不存在");
         }
         if (!position.getBossId().equals(bossId)) {
-            throw new BusinessException("无权操作其他人的职位");
+            throw new ForbiddenException("无权操作其他人的职位");
         }
         position.setStatus(1);
         positionMapper.updateById(position);
@@ -150,11 +161,37 @@ public class PositionServiceImpl implements PositionService {
 
     @Override
     public List<Position> getPositionsByCompanyId(Long companyId) {
-        LambdaQueryWrapper<Position> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Position::getCompanyId, companyId)
-               .eq(Position::getStatus, 1)
-               .orderByDesc(Position::getCreateTime);
-        List<Position> positions = positionMapper.selectList(wrapper);
+        List<Position> positions = positionMapper.selectList(new LambdaQueryWrapper<Position>()
+                .eq(Position::getCompanyId, companyId)
+                .eq(Position::getStatus, 1)
+                .orderByDesc(Position::getCreateTime));
+        for (Position p : positions) {
+            enrichCompanyInfo(p);
+        }
+        return positions;
+    }
+
+    @Override
+    public List<Position> getLatestPositions(int limit) {
+        List<Position> positions = positionMapper.selectList(new LambdaQueryWrapper<Position>()
+                .eq(Position::getStatus, 1)
+                .orderByDesc(Position::getCreateTime)
+                .last("LIMIT " + limit));
+        for (Position p : positions) {
+            enrichCompanyInfo(p);
+        }
+        return positions;
+    }
+
+    @Override
+    public List<Position> getHotPositions(int limit) {
+        // 热门职位：按创建时间倒序，同时筛选薪资较高的职位（简单实现）
+        // 实际项目中应该根据投递数量排序，这里用薪资作为热门度指标
+        List<Position> positions = positionMapper.selectList(new LambdaQueryWrapper<Position>()
+                .eq(Position::getStatus, 1)
+                .orderByDesc(Position::getSalaryMax)
+                .orderByDesc(Position::getCreateTime)
+                .last("LIMIT " + limit));
         for (Position p : positions) {
             enrichCompanyInfo(p);
         }

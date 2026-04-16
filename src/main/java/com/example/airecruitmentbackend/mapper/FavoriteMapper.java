@@ -1,12 +1,12 @@
 package com.example.airecruitmentbackend.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.example.airecruitmentbackend.entity.Application;
+import com.example.airecruitmentbackend.entity.Favorite;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 投递记录Mapper
+ * 收藏Mapper
  */
 @Mapper
-public interface ApplicationMapper extends BaseMapper<Application> {
+public interface FavoriteMapper extends BaseMapper<Favorite> {
 }

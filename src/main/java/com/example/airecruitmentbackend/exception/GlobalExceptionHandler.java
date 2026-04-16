@@ -2,6 +2,7 @@ package com.example.airecruitmentbackend.exception;
 
 import com.example.airecruitmentbackend.common.Result;
 import io.jsonwebtoken.JwtException;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
@@ -16,6 +17,28 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    /**
+     * 处理未授权异常（401）
+     * 包括：用户未登录、Token无效、Token过期等
+     */
+    @ExceptionHandler(UnauthorizedException.class)
+    public Result<?> handleUnauthorizedException(UnauthorizedException e, HttpServletResponse response) {
+        log.warn("未授权：{}", e.getMessage());
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        return Result.error(401, e.getMessage());
+    }
+
+    /**
+     * 处理禁止访问异常（403）
+     * 包括：权限不足、无权操作他人资源等
+     */
+    @ExceptionHandler(ForbiddenException.class)
+    public Result<?> handleForbiddenException(ForbiddenException e, HttpServletResponse response) {
+        log.warn("禁止访问：{}", e.getMessage());
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        return Result.error(403, e.getMessage());
+    }
 
     /**
      * 处理业务异常
@@ -58,9 +81,10 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(JwtException.class)
-    public Result<?> handleJwtException(JwtException e) {
+    public Result<?> handleJwtException(JwtException e, HttpServletResponse response) {
         log.error("身份验证失败：{}", e.getMessage());
-        return Result.error("身份验证失败,请尝试重新登录");
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        return Result.error(401, "登录已过期，请重新登录");
     }
 
     /**

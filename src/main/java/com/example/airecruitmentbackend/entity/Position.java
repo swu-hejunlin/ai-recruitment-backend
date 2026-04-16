@@ -1,7 +1,6 @@
 package com.example.airecruitmentbackend.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -100,16 +99,13 @@ public class Position {
      */
     private LocalDateTime updateTime;
 
-    // ===== 非数据库字段，用于级联查询 =====
     /**
-     * 企业Logo
+     * 企业Logo（冗余字段，方便前端展示）
      */
-    @TableField(exist = false)
     private String companyLogo;
 
     /**
-     * 企业名称
+     * 企业名称（冗余字段，方便前端展示）
      */
-    @TableField(exist = false)
     private String companyName;
 }

@@ -54,4 +54,21 @@ public interface PositionService {
      * 根据公司ID查询职位列表
      */
     List<Position> getPositionsByCompanyId(Long companyId);
+
+    /**
+     * 获取最新职位列表（首页推荐）
+     *
+     * @param limit 返回数量限制
+     * @return 最新职位列表
+     */
+    List<Position> getLatestPositions(int limit);
+
+    /**
+     * 获取热门职位列表（首页推荐）
+     * 按投递数量倒序返回
+     *
+     * @param limit 返回数量限制
+     * @return 热门职位列表
+     */
+    List<Position> getHotPositions(int limit);
 }

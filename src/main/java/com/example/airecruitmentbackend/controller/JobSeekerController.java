@@ -2,15 +2,14 @@ package com.example.airecruitmentbackend.controller;
 
 import com.example.airecruitmentbackend.common.Result;
 import com.example.airecruitmentbackend.dto.JobSeekerDetailDTO;
-import com.example.airecruitmentbackend.entity.JobSeeker;
 import com.example.airecruitmentbackend.dto.JobSeekerUpdateRequest;
+import com.example.airecruitmentbackend.entity.JobSeeker;
+import com.example.airecruitmentbackend.exception.ForbiddenException;
 import com.example.airecruitmentbackend.service.EducationService;
 import com.example.airecruitmentbackend.service.ExperienceService;
 import com.example.airecruitmentbackend.service.JobSeekerService;
 import com.example.airecruitmentbackend.service.ProjectService;
 import com.example.airecruitmentbackend.service.UserService;
-import com.example.airecruitmentbackend.util.JwtUtil;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,26 +24,28 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/job-seeker")
 @RequiredArgsConstructor
-public class JobSeekerController {
+public class JobSeekerController extends BaseController {
 
     private final JobSeekerService jobSeekerService;
     private final EducationService educationService;
     private final ExperienceService experienceService;
     private final ProjectService projectService;
     private final UserService userService;
-    private final JwtUtil jwtUtil;
 
     /**
-     * 获取求职者完整信息
+     * 获取求职者完整信息（仅求职者）
      * 接口地址：GET /api/job-seeker/info
      * 返回基本信息 + 教育经历 + 工作/实习经历 + 项目经历
-     *
-     * @param request HTTP请求（从请求头中获取JWT令牌）
-     * @return 求职者完整信息
      */
     @GetMapping("/info")
-    public Result<JobSeekerDetailDTO> getJobSeekerInfo(HttpServletRequest request) {
-        Long userId = jwtUtil.getUserIdFromToken(request);
+    public Result<JobSeekerDetailDTO> getJobSeekerInfo() {
+        // 角色校验：只有求职者(role=1)才能访问
+        Integer role = getCurrentUserRole();
+        if (role != 1) {
+            throw new ForbiddenException("只有求职者才能访问简历信息");
+        }
+        
+        Long userId = getCurrentUserId();
         log.info("获取求职者完整信息请求，userId：{}", userId);
 
         JobSeeker jobSeeker = jobSeekerService.getByUserId(userId);
@@ -63,17 +64,18 @@ public class JobSeekerController {
     }
 
     /**
-     * 更新求职者信息
+     * 更新求职者信息（仅求职者）
      * 接口地址：PUT /api/job-seeker/update
-     *
-     * @param request HTTP请求（从请求头中获取JWT令牌）
-     * @param updateRequest 求职者信息更新请求
-     * @return 操作结果
      */
     @PutMapping("/update")
-    public Result<Void> updateJobSeekerInfo(HttpServletRequest request,
-                                            @Valid @RequestBody JobSeekerUpdateRequest updateRequest) {
-        Long userId = jwtUtil.getUserIdFromToken(request);
+    public Result<Void> updateJobSeekerInfo(@Valid @RequestBody JobSeekerUpdateRequest updateRequest) {
+        // 角色校验：只有求职者(role=1)才能更新
+        Integer role = getCurrentUserRole();
+        if (role != 1) {
+            throw new ForbiddenException("只有求职者才能更新简历信息");
+        }
+        
+        Long userId = getCurrentUserId();
         log.info("更新求职者信息请求，userId：{}，求职者ID：{}", userId, updateRequest.getId());
 
         JobSeeker jobSeeker = jobSeekerService.getById(updateRequest.getId());
@@ -82,7 +84,7 @@ public class JobSeekerController {
         }
 
         if (!jobSeeker.getUserId().equals(userId)) {
-            return Result.error("无权修改其他用户的信息");
+            throw new ForbiddenException("无权修改其他用户的信息");
         }
 
         BeanUtils.copyProperties(updateRequest, jobSeeker);
@@ -92,17 +94,18 @@ public class JobSeekerController {
     }
 
     /**
-     * 上传头像
+     * 上传头像（仅求职者）
      * 接口地址：POST /api/job-seeker/avatar
-     *
-     * @param request HTTP请求（从请求头中获取JWT令牌）
-     * @param avatarUrl 头像URL
-     * @return 操作结果
      */
     @PostMapping("/avatar")
-    public Result<Void> updateAvatar(HttpServletRequest request,
-                                    @RequestParam("avatarUrl") String avatarUrl) {
-        Long userId = jwtUtil.getUserIdFromToken(request);
+    public Result<Void> updateAvatar(@RequestParam("avatarUrl") String avatarUrl) {
+        // 角色校验：只有求职者(role=1)才能上传
+        Integer role = getCurrentUserRole();
+        if (role != 1) {
+            throw new ForbiddenException("只有求职者才能上传头像");
+        }
+        
+        Long userId = getCurrentUserId();
         log.info("更新求职者头像请求，userId：{}，avatarUrl：{}", userId, avatarUrl);
 
         jobSeekerService.updateAvatar(userId, avatarUrl);
@@ -110,17 +113,18 @@ public class JobSeekerController {
     }
 
     /**
-     * 上传简历
+     * 上传简历（仅求职者）
      * 接口地址：POST /api/job-seeker/resume
-     *
-     * @param request HTTP请求（从请求头中获取JWT令牌）
-     * @param resumeUrl 简历URL
-     * @return 操作结果
      */
     @PostMapping("/resume")
-    public Result<Void> updateResume(HttpServletRequest request,
-                                     @RequestParam("resumeUrl") String resumeUrl) {
-        Long userId = jwtUtil.getUserIdFromToken(request);
+    public Result<Void> updateResume(@RequestParam("resumeUrl") String resumeUrl) {
+        // 角色校验：只有求职者(role=1)才能上传
+        Integer role = getCurrentUserRole();
+        if (role != 1) {
+            throw new ForbiddenException("只有求职者才能上传简历");
+        }
+        
+        Long userId = getCurrentUserId();
         log.info("更新求职者简历请求，userId：{}，resumeUrl：{}", userId, resumeUrl);
 
         jobSeekerService.updateResume(userId, resumeUrl);
@@ -128,15 +132,18 @@ public class JobSeekerController {
     }
 
     /**
-     * 查看头像
+     * 查看头像（仅求职者）
      * 接口地址：GET /api/job-seeker/avatar
-     *
-     * @param request HTTP请求（从请求头中获取JWT令牌）
-     * @return 头像URL
      */
     @GetMapping("/avatar")
-    public Result<String> getAvatar(HttpServletRequest request) {
-        Long userId = jwtUtil.getUserIdFromToken(request);
+    public Result<String> getAvatar() {
+        // 角色校验：只有求职者(role=1)才能查看
+        Integer role = getCurrentUserRole();
+        if (role != 1) {
+            throw new ForbiddenException("只有求职者才能查看头像");
+        }
+        
+        Long userId = getCurrentUserId();
         log.info("获取求职者头像请求，userId：{}", userId);
 
         String avatarUrl = jobSeekerService.getAvatarUrl(userId);
@@ -144,15 +151,18 @@ public class JobSeekerController {
     }
 
     /**
-     * 查看简历
+     * 查看简历（仅求职者）
      * 接口地址：GET /api/job-seeker/resume
-     *
-     * @param request HTTP请求（从请求头中获取JWT令牌）
-     * @return 简历URL
      */
     @GetMapping("/resume")
-    public Result<String> getResume(HttpServletRequest request) {
-        Long userId = jwtUtil.getUserIdFromToken(request);
+    public Result<String> getResume() {
+        // 角色校验：只有求职者(role=1)才能查看
+        Integer role = getCurrentUserRole();
+        if (role != 1) {
+            throw new ForbiddenException("只有求职者才能查看简历");
+        }
+        
+        Long userId = getCurrentUserId();
         log.info("获取求职者简历请求，userId：{}", userId);
 
         String resumeUrl = jobSeekerService.getResumeUrl(userId);

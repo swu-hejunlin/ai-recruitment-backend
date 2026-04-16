@@ -139,6 +139,8 @@ CREATE TABLE `position` (
     `requirement` TEXT NOT NULL COMMENT '任职要求',
     `status` TINYINT DEFAULT 1 COMMENT '状态: 1-招聘中, 0-已关闭',
     `tags` VARCHAR(500) COMMENT '职位福利标签(JSON数组, 如["五险一金","双休"])',
+    `company_logo` VARCHAR(500) DEFAULT NULL COMMENT '企业Logo（冗余字段）',
+    `company_name` VARCHAR(100) DEFAULT NULL COMMENT '企业名称（冗余字段，方便前端展示）',
     `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
@@ -159,6 +161,9 @@ CREATE TABLE `application` (
     `position_id` BIGINT NOT NULL COMMENT '职位ID',
     `company_id` BIGINT NOT NULL COMMENT '所属企业ID（冗余，方便Boss快速查询）',
     `boss_id` BIGINT NOT NULL COMMENT '接收投递的Boss/HR ID（冗余，方便通知查询）',
+    `job_seeker_name` VARCHAR(50) DEFAULT NULL COMMENT '求职者姓名（冗余字段，方便前端展示）',
+    `company_name` VARCHAR(100) DEFAULT NULL COMMENT '企业名称（冗余字段，方便前端展示）',
+    `position_title` VARCHAR(100) DEFAULT NULL COMMENT '职位名称（冗余字段，方便前端展示）',
     `status` TINYINT DEFAULT 1 COMMENT '投递状态：1-待查看，2-已查看，3-面试中，4-不合适，5-录用',
     `ai_score` DECIMAL(5,2) DEFAULT NULL COMMENT 'AI匹配分（第二阶段预留：0-100分）',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '投递时间',
@@ -284,14 +289,74 @@ CREATE TABLE `company` (
 -- job_seeker (1) ──── (N) education
 -- job_seeker (1) ──── (N) experience
 -- job_seeker (1) ──── (N) project
+-- application 表新增冗余字段 job_seeker_name、company_name、position_title，用于前端快速展示
+-- position 表新增冗余字段 company_logo、company_name，用于前端快速展示
+
+-- ========================================
+-- 增量迁移SQL（已有数据库执行）
+-- ========================================
+-- 【application 表迁移】
+-- ALTER TABLE `application` ADD COLUMN `job_seeker_name` VARCHAR(50) DEFAULT NULL COMMENT '求职者姓名（冗余字段）' AFTER `boss_id`;
+-- ALTER TABLE `application` ADD COLUMN `company_name` VARCHAR(100) DEFAULT NULL COMMENT '企业名称（冗余字段）' AFTER `job_seeker_name`;
+-- ALTER TABLE `application` ADD COLUMN `position_title` VARCHAR(100) DEFAULT NULL COMMENT '职位名称（冗余字段）' AFTER `company_name`;
+-- UPDATE application a
+-- INNER JOIN job_seeker js ON a.job_seeker_id = js.id
+-- INNER JOIN company c ON a.company_id = c.id
+-- INNER JOIN position p ON a.position_id = p.id
+-- SET a.job_seeker_name = js.name, a.company_name = c.company_name, a.position_title = p.title
+-- WHERE a.job_seeker_name IS NULL OR a.company_name IS NULL OR a.position_title IS NULL;
+
+-- 【position 表迁移】
+-- ALTER TABLE `position` ADD COLUMN `company_logo` VARCHAR(500) DEFAULT NULL COMMENT '企业Logo（冗余字段）' AFTER `tags`;
+-- ALTER TABLE `position` ADD COLUMN `company_name` VARCHAR(100) DEFAULT NULL COMMENT '企业名称（冗余字段）' AFTER `company_logo`;
+-- UPDATE position p
+-- INNER JOIN company c ON p.company_id = c.id
+-- SET p.company_logo = c.logo, p.company_name = c.company_name
+-- WHERE p.company_logo IS NULL OR p.company_name IS NULL;
+
+-- ========================================
+-- 面试记录表
+-- ========================================
+CREATE TABLE `interview` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '面试ID',
+    `application_id` BIGINT NOT NULL COMMENT '关联投递ID',
+    `job_seeker_id` BIGINT NOT NULL COMMENT '求职者ID',
+    `position_id` BIGINT NOT NULL COMMENT '职位ID',
+    `company_id` BIGINT NOT NULL COMMENT '企业ID',
+    `interview_time` DATETIME NOT NULL COMMENT '面试时间',
+    `interview_type` TINYINT NOT NULL COMMENT '面试类型：1-线下，2-线上，3-AI面试',
+    `interview_address` VARCHAR(200) DEFAULT NULL COMMENT '面试地址（线下）',
+    `interview_link` VARCHAR(500) DEFAULT NULL COMMENT '面试链接（线上）',
+    `status` TINYINT DEFAULT 1 COMMENT '面试状态：1-待确认，2-已确认，3-已拒绝，4-已完成',
+    `remark` TEXT DEFAULT NULL COMMENT '备注',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_application` (`application_id`),
+    KEY `idx_job_seeker` (`job_seeker_id`),
+    KEY `idx_position` (`position_id`),
+    KEY `idx_company` (`company_id`),
+    KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='面试记录表';
+
+-- ========================================
+-- 收藏表
+-- ========================================
+CREATE TABLE `favorite` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '收藏ID',
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `target_type` TINYINT NOT NULL COMMENT '收藏类型：1-职位，2-企业，3-求职者',
+    `target_id` BIGINT NOT NULL COMMENT '目标ID',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '收藏时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_user_target` (`user_id`, `target_type`, `target_id`),
+    KEY `idx_user` (`user_id`),
+    KEY `idx_target` (`target_type`, `target_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='收藏表';
 
 -- ========================================
 -- 预留扩展
 -- ========================================
 
 -- 后续可创建以下表：
--- - position: 岗位信息表（企业发布的职位）
--- - resume: 简历表（更详细的简历信息）
--- - application: 投递记录表（求职者投递的岗位）
--- - interview: 面试记录表
 -- - chat: 聊天记录表（AI面试）

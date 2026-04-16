@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.airecruitmentbackend.entity.Project;
 import com.example.airecruitmentbackend.exception.BusinessException;
+import com.example.airecruitmentbackend.exception.ForbiddenException;
 import com.example.airecruitmentbackend.mapper.ProjectMapper;
 import com.example.airecruitmentbackend.service.ProjectService;
 import lombok.RequiredArgsConstructor;
@@ -73,7 +74,7 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
             throw new BusinessException("项目不存在");
         }
         if (jobSeekerId != null && !project.getJobSeekerId().equals(jobSeekerId)) {
-            throw new BusinessException("无权删除他人的项目");
+            throw new ForbiddenException("无权删除他人的项目");
         }
         boolean success = removeById(id);
         log.info("删除项目经历成功：id={}", id);

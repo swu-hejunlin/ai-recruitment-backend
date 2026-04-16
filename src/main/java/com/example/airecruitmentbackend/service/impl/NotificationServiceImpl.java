@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.airecruitmentbackend.entity.Notification;
 import com.example.airecruitmentbackend.exception.BusinessException;
+import com.example.airecruitmentbackend.exception.ForbiddenException;
 import com.example.airecruitmentbackend.mapper.NotificationMapper;
 import com.example.airecruitmentbackend.service.NotificationService;
 import lombok.RequiredArgsConstructor;
@@ -39,18 +40,16 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public Page<Notification> getNotifications(Long receiverId, int pageNum, int pageSize) {
         Page<Notification> page = new Page<>(pageNum, pageSize);
-        LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Notification::getReceiverId, receiverId)
-               .orderByDesc(Notification::getCreateTime);
-        return notificationMapper.selectPage(page, wrapper);
+        return notificationMapper.selectPage(page, new LambdaQueryWrapper<Notification>()
+                .eq(Notification::getReceiverId, receiverId)
+                .orderByDesc(Notification::getCreateTime));
     }
 
     @Override
     public Long getUnreadCount(Long receiverId) {
-        LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Notification::getReceiverId, receiverId)
-               .eq(Notification::getIsRead, 0);
-        return notificationMapper.selectCount(wrapper);
+        return notificationMapper.selectCount(new LambdaQueryWrapper<Notification>()
+                .eq(Notification::getReceiverId, receiverId)
+                .eq(Notification::getIsRead, 0));
     }
 
     @Override
@@ -60,7 +59,7 @@ public class NotificationServiceImpl implements NotificationService {
             throw new BusinessException("通知不存在");
         }
         if (!notification.getReceiverId().equals(receiverId)) {
-            throw new BusinessException("无权操作此通知");
+            throw new ForbiddenException("无权操作此通知");
         }
         notification.setIsRead(1);
         notificationMapper.updateById(notification);
@@ -69,24 +68,22 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public void markAsReadByBusinessId(Long businessId, Long receiverId) {
-        LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Notification::getBusinessId, businessId)
-               .eq(Notification::getReceiverId, receiverId)
-               .eq(Notification::getIsRead, 0);
         Notification notification = new Notification();
         notification.setIsRead(1);
-        notificationMapper.update(notification, wrapper);
+        notificationMapper.update(notification, new LambdaQueryWrapper<Notification>()
+                .eq(Notification::getBusinessId, businessId)
+                .eq(Notification::getReceiverId, receiverId)
+                .eq(Notification::getIsRead, 0));
         log.info("标记业务相关通知已读，businessId：{}", businessId);
     }
 
     @Override
     public void markAllAsRead(Long receiverId) {
-        LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Notification::getReceiverId, receiverId)
-               .eq(Notification::getIsRead, 0);
         Notification notification = new Notification();
         notification.setIsRead(1);
-        notificationMapper.update(notification, wrapper);
+        notificationMapper.update(notification, new LambdaQueryWrapper<Notification>()
+                .eq(Notification::getReceiverId, receiverId)
+                .eq(Notification::getIsRead, 0));
         log.info("标记所有通知已读，receiverId：{}", receiverId);
     }
 }

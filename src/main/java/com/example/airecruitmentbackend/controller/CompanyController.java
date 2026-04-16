@@ -3,9 +3,8 @@ package com.example.airecruitmentbackend.controller;
 import com.example.airecruitmentbackend.common.Result;
 import com.example.airecruitmentbackend.entity.Company;
 import com.example.airecruitmentbackend.dto.CompanyUpdateRequest;
+import com.example.airecruitmentbackend.exception.ForbiddenException;
 import com.example.airecruitmentbackend.service.CompanyService;
-import com.example.airecruitmentbackend.util.JwtUtil;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,21 +19,23 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/company")
 @RequiredArgsConstructor
-public class CompanyController {
+public class CompanyController extends BaseController {
 
     private final CompanyService companyService;
-    private final JwtUtil jwtUtil;
 
     /**
-     * 获取企业信息
+     * 获取当前登录企业信息（仅企业HR）
      * 接口地址：GET /api/company/info
-     *
-     * @param request HTTP请求（从请求头中获取JWT令牌）
-     * @return 企业信息
      */
     @GetMapping("/info")
-    public Result<Company> getCompanyInfo(HttpServletRequest request) {
-        Long userId = jwtUtil.getUserIdFromToken(request);
+    public Result<Company> getCompanyInfo() {
+        // 角色校验：只有企业HR(role=2)才能访问
+        Integer role = getCurrentUserRole();
+        if (role != 2) {
+            throw new ForbiddenException("只有企业HR才能访问企业管理");
+        }
+        
+        Long userId = getCurrentUserId();
         log.info("获取企业信息请求，userId：{}", userId);
 
         Company company = companyService.getByUserId(userId);
@@ -46,17 +47,35 @@ public class CompanyController {
     }
 
     /**
-     * 更新企业信息
+     * 根据公司ID查询企业信息（供求职者查看公司详情页）
+     * 接口地址：GET /api/company/{id}
+     * 公开接口，无需登录
+     */
+    @GetMapping("/{id}")
+    public Result<Company> getCompanyById(@PathVariable("id") Long id) {
+        log.info("根据公司ID查询企业信息请求，companyId：{}", id);
+
+        Company company = companyService.getById(id);
+        if (company == null) {
+            return Result.error("企业信息不存在");
+        }
+
+        return Result.success("查询成功", company);
+    }
+
+    /**
+     * 更新企业信息（仅企业HR）
      * 接口地址：PUT /api/company/update
-     *
-     * @param request HTTP请求（从请求头中获取JWT令牌）
-     * @param updateRequest 企业信息更新请求
-     * @return 操作结果
      */
     @PutMapping("/update")
-    public Result<Void> updateCompanyInfo(HttpServletRequest request,
-                                          @Valid @RequestBody CompanyUpdateRequest updateRequest) {
-        Long userId = jwtUtil.getUserIdFromToken(request);
+    public Result<Void> updateCompanyInfo(@Valid @RequestBody CompanyUpdateRequest updateRequest) {
+        // 角色校验：只有企业HR(role=2)才能更新
+        Integer role = getCurrentUserRole();
+        if (role != 2) {
+            throw new ForbiddenException("只有企业HR才能更新企业信息");
+        }
+        
+        Long userId = getCurrentUserId();
         log.info("更新企业信息请求，userId：{}，企业ID：{}", userId, updateRequest.getId());
 
         Company company = companyService.getById(updateRequest.getId());
@@ -65,7 +84,7 @@ public class CompanyController {
         }
 
         if (!company.getUserId().equals(userId)) {
-            return Result.error("无权修改其他企业的信息");
+            throw new ForbiddenException("无权修改其他企业的信息");
         }
 
         BeanUtils.copyProperties(updateRequest, company);
@@ -75,17 +94,18 @@ public class CompanyController {
     }
 
     /**
-     * 上传企业logo
+     * 上传企业logo（仅企业HR）
      * 接口地址：POST /api/company/logo
-     *
-     * @param request HTTP请求（从请求头中获取JWT令牌）
-     * @param logoUrl logo URL
-     * @return 操作结果
      */
     @PostMapping("/logo")
-    public Result<Void> updateLogo(HttpServletRequest request,
-                                    @RequestParam("logoUrl") String logoUrl) {
-        Long userId = jwtUtil.getUserIdFromToken(request);
+    public Result<Void> updateLogo(@RequestParam("logoUrl") String logoUrl) {
+        // 角色校验：只有企业HR(role=2)才能上传
+        Integer role = getCurrentUserRole();
+        if (role != 2) {
+            throw new ForbiddenException("只有企业HR才能上传logo");
+        }
+        
+        Long userId = getCurrentUserId();
         log.info("更新企业logo请求，userId：{}，logoUrl：{}", userId, logoUrl);
 
         companyService.updateLogo(userId, logoUrl);
@@ -93,17 +113,18 @@ public class CompanyController {
     }
 
     /**
-     * 上传营业执照
+     * 上传营业执照（仅企业HR）
      * 接口地址：POST /api/company/license
-     *
-     * @param request HTTP请求（从请求头中获取JWT令牌）
-     * @param licenseUrl 营业执照URL
-     * @return 操作结果
      */
     @PostMapping("/license")
-    public Result<Void> updateBusinessLicense(HttpServletRequest request,
-                                              @RequestParam("licenseUrl") String licenseUrl) {
-        Long userId = jwtUtil.getUserIdFromToken(request);
+    public Result<Void> updateBusinessLicense(@RequestParam("licenseUrl") String licenseUrl) {
+        // 角色校验：只有企业HR(role=2)才能上传
+        Integer role = getCurrentUserRole();
+        if (role != 2) {
+            throw new ForbiddenException("只有企业HR才能上传营业执照");
+        }
+        
+        Long userId = getCurrentUserId();
         log.info("更新企业营业执照请求，userId：{}，licenseUrl：{}", userId, licenseUrl);
 
         companyService.updateBusinessLicense(userId, licenseUrl);

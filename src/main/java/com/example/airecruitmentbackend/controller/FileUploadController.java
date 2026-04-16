@@ -6,9 +6,7 @@ import com.example.airecruitmentbackend.exception.FileUploadException;
 import com.example.airecruitmentbackend.service.UserService;
 import com.example.airecruitmentbackend.util.FileConstants;
 import com.example.airecruitmentbackend.util.FileValidator;
-import com.example.airecruitmentbackend.util.JwtUtil;
 import com.example.airecruitmentbackend.util.OssUtil;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -18,37 +16,29 @@ import java.io.IOException;
 
 /**
  * 文件上传控制器
- * 处理文件上传相关的接口请求
  */
 @Slf4j
 @RestController
 @RequestMapping("/api/file")
 @RequiredArgsConstructor
-public class FileUploadController {
+public class FileUploadController extends BaseController {
 
     private final OssUtil ossUtil;
-    private final JwtUtil jwtUtil;
     private final UserService userService;
 
     /**
      * 上传文件
-     * 接口地址：POST /api/file/upload
-     *
-     * @param request HTTP请求
-     * @param file 上传的文件
-     * @param fileType 文件类型（avatar/resume/logo/license）
-     * @return 文件上传结果
      */
     @PostMapping("/upload")
-    public Result<UploadResponse> uploadFile(HttpServletRequest request,
-                                             @RequestParam("file") MultipartFile file,
-                                             @RequestParam("fileType") String fileType) {
-        Long userId = jwtUtil.getUserIdFromToken(request);
+    public Result<UploadResponse> uploadFile(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("fileType") String fileType) {
+        Long userId = getCurrentUserId();
         log.info("收到文件上传请求，userId：{}，fileType：{}，fileName：{}",
                 userId, fileType, file.getOriginalFilename());
 
         try {
-            Integer role = userService.getRoleByUserId(userId);
+            Integer role = getCurrentUserRole();
             String filePath = FileConstants.getFilePathByFileType(fileType, role);
 
             if (filePath == null) {
@@ -81,23 +71,17 @@ public class FileUploadController {
 
     /**
      * 批量上传文件
-     * 接口地址：POST /api/file/upload-batch
-     *
-     * @param request HTTP请求
-     * @param files 上传的文件列表
-     * @param fileType 文件类型
-     * @return 文件上传结果列表
      */
     @PostMapping("/upload-batch")
-    public Result<UploadResponse[]> uploadFiles(HttpServletRequest request,
-                                                 @RequestParam("files") MultipartFile[] files,
-                                                 @RequestParam("fileType") String fileType) {
-        Long userId = jwtUtil.getUserIdFromToken(request);
+    public Result<UploadResponse[]> uploadFiles(
+            @RequestParam("files") MultipartFile[] files,
+            @RequestParam("fileType") String fileType) {
+        Long userId = getCurrentUserId();
         log.info("收到批量文件上传请求，userId：{}，fileType：{}，文件数量：{}",
                 userId, fileType, files.length);
 
         try {
-            Integer role = userService.getRoleByUserId(userId);
+            Integer role = getCurrentUserRole();
             String filePath = FileConstants.getFilePathByFileType(fileType, role);
 
             if (filePath == null) {
@@ -132,10 +116,6 @@ public class FileUploadController {
 
     /**
      * 删除文件
-     * 接口地址：DELETE /api/file/delete
-     *
-     * @param fileUrl 文件URL
-     * @return 操作结果
      */
     @DeleteMapping("/delete")
     public Result<Void> deleteFile(@RequestParam("fileUrl") String fileUrl) {

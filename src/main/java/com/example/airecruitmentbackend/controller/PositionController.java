@@ -119,9 +119,14 @@ public class PositionController extends BaseController {
             @RequestParam(value = "title", required = false) String title,
             @RequestParam(value = "city", required = false) String city,
             @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "workYearsMin", required = false) Integer workYearsMin,
+            @RequestParam(value = "educationMin", required = false) Integer educationMin,
+            @RequestParam(value = "salaryMin", required = false) Integer salaryMin,
+            @RequestParam(value = "salaryMax", required = false) Integer salaryMax,
+            @RequestParam(value = "searchType", required = false) String searchType,
             @RequestParam(value = "pageNum", defaultValue = "1") int pageNum,
             @RequestParam(value = "pageSize", defaultValue = "10") int pageSize) {
-        Page<Position> page = positionService.getActivePositions(title, city, category, pageNum, pageSize);
+        Page<Position> page = positionService.getActivePositions(title, city, category, workYearsMin, educationMin, salaryMin, salaryMax, searchType, pageNum, pageSize);
         return Result.success("查询成功", page);
     }
 

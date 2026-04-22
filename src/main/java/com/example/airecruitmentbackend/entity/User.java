@@ -31,6 +31,16 @@ public class User {
     private Integer role;
 
     /**
+     * 是否已生成画像：0-否，1-是
+     */
+    private Integer profileGenerated;
+
+    /**
+     * 是否为求职者：0-否，1-是
+     */
+    private Integer isJobSeeker;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;
@@ -39,4 +49,11 @@ public class User {
      * 更新时间
      */
     private LocalDateTime updateTime;
+
+    /**
+     * 获取用户名（返回手机号）
+     */
+    public String getUsername() {
+        return phone;
+    }
 }

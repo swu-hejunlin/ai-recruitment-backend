@@ -108,4 +108,9 @@ public class Position {
      * 企业名称（冗余字段，方便前端展示）
      */
     private String companyName;
+
+    /**
+     * 是否已生成画像：0-否，1-是
+     */
+    private Integer profileGenerated;
 }

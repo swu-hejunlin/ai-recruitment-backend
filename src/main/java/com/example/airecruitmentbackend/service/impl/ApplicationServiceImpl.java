@@ -14,13 +14,17 @@ import com.example.airecruitmentbackend.mapper.CompanyMapper;
 import com.example.airecruitmentbackend.mapper.JobSeekerMapper;
 import com.example.airecruitmentbackend.mapper.PositionMapper;
 import com.example.airecruitmentbackend.service.ApplicationService;
+import com.example.airecruitmentbackend.service.AIScoreService;
 import com.example.airecruitmentbackend.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 
 /**
  * 投递记录Service实现
@@ -35,6 +39,8 @@ public class ApplicationServiceImpl implements ApplicationService {
     private final JobSeekerMapper jobSeekerMapper;
     private final CompanyMapper companyMapper;
     private final NotificationService notificationService;
+    private final AIScoreService aiScoreService;
+    private final ExecutorService aiScoreExecutor;
 
     @Override
     @Transactional
@@ -76,6 +82,21 @@ public class ApplicationServiceImpl implements ApplicationService {
         application.setUpdateTime(LocalDateTime.now());
         applicationMapper.insert(application);
 
+        // 异步计算AI评分
+        CompletableFuture.runAsync(() -> {
+            try {
+                BigDecimal score = aiScoreService.calculateApplicationScore(jobSeekerId, positionId);
+                // 更新评分
+                Application updateApplication = new Application();
+                updateApplication.setId(application.getId());
+                updateApplication.setAiScore(score);
+                applicationMapper.updateById(updateApplication);
+                log.info("AI评分计算完成，applicationId：{}，score：{}", application.getId(), score);
+            } catch (Exception e) {
+                log.error("计算AI评分失败", e);
+            }
+        }, aiScoreExecutor);
+
         // 发送通知给Boss
         String content = String.format("您收到了来自 %s 对 %s 的新投递",
                 jobSeeker.getName() != null ? jobSeeker.getName() : "求职者",
@@ -105,7 +126,7 @@ public class ApplicationServiceImpl implements ApplicationService {
         if (status != null) {
             wrapper.eq(Application::getStatus, status);
         }
-        wrapper.orderByDesc(Application::getCreateTime);
+        wrapper.orderByDesc(Application::getAiScore);
         return applicationMapper.selectPage(page, wrapper);
     }
 

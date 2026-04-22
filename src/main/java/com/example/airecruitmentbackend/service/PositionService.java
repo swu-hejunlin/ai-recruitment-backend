@@ -36,9 +36,9 @@ public interface PositionService {
     Page<Position> getPositionsByBoss(Long bossId, int pageNum, int pageSize);
 
     /**
-     * 求职者查询职位列表（只显示招聘中的，支持筛选）
+     * 求职者查询职位列表（招聘中，支持筛选）- 公开
      */
-    Page<Position> getActivePositions(String title, String city, String category, int pageNum, int pageSize);
+    Page<Position> getActivePositions(String title, String city, String category, Integer workYearsMin, Integer educationMin, Integer salaryMin, Integer salaryMax, String searchType, int pageNum, int pageSize);
 
     /**
      * 关闭职位

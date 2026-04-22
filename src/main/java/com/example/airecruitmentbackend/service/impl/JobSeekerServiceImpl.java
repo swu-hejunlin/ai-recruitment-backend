@@ -9,6 +9,7 @@ import com.example.airecruitmentbackend.exception.BusinessException;
 import com.example.airecruitmentbackend.mapper.ApplicationMapper;
 import com.example.airecruitmentbackend.mapper.JobSeekerMapper;
 import com.example.airecruitmentbackend.service.JobSeekerService;
+import com.example.airecruitmentbackend.service.TalentProfileService;
 import com.example.airecruitmentbackend.util.OssUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +30,9 @@ public class JobSeekerServiceImpl extends ServiceImpl<JobSeekerMapper, JobSeeker
 
     @Autowired
     OssUtil ossUtil;
+
+    @Autowired
+    TalentProfileService talentProfileService;
 
     @Override
     public JobSeeker getByUserId(Long userId) {
@@ -66,6 +70,18 @@ public class JobSeekerServiceImpl extends ServiceImpl<JobSeekerMapper, JobSeeker
         }
 
         log.info("更新求职者信息成功：id={}", jobSeeker.getId());
+
+        // 异步生成人才画像
+        if (original != null && original.getUserId() != null) {
+            log.info("开始异步生成人才画像，用户ID：{}", original.getUserId());
+            talentProfileService.generateTalentProfileAsync(original.getUserId())
+                    .thenAccept(result -> log.info("异步生成人才画像完成，用户ID：{}", original.getUserId()))
+                    .exceptionally(e -> {
+                        log.error("异步生成人才画像失败，用户ID：{}", original.getUserId(), e);
+                        return null;
+                    });
+        }
+
         return true;
     }
 
@@ -116,6 +132,16 @@ public class JobSeekerServiceImpl extends ServiceImpl<JobSeekerMapper, JobSeeker
         }
 
         log.info("更新求职者简历成功：userId={}, resumeUrl={}", userId, resumeUrl);
+
+        // 异步生成人才画像
+        log.info("开始异步生成人才画像，用户ID：{}", userId);
+        talentProfileService.generateTalentProfileAsync(userId)
+                .thenAccept(result -> log.info("异步生成人才画像完成，用户ID：{}", userId))
+                .exceptionally(e -> {
+                    log.error("异步生成人才画像失败，用户ID：{}", userId, e);
+                    return null;
+                });
+
         return true;
     }
 

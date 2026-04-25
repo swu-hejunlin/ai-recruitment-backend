@@ -1,6 +1,7 @@
 package com.example.airecruitmentbackend.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.example.airecruitmentbackend.dto.InterviewEvaluationDTO;
 import com.example.airecruitmentbackend.dto.InterviewRequest;
 import com.example.airecruitmentbackend.dto.InterviewDetailDTO;
 import com.example.airecruitmentbackend.entity.Interview;
@@ -56,4 +57,49 @@ public interface InterviewService extends IService<Interview> {
      * @return 是否成功
      */
     boolean deleteInterview(Long interviewId, Long bossId);
+
+    /**
+     * 处理模拟面试
+     * @param video 视频文件
+     * @param userId 用户ID
+     * @return 评估结果
+     */
+    Object processMockInterview(org.springframework.web.multipart.MultipartFile video, Long userId);
+
+    Object processMockInterview(org.springframework.web.multipart.MultipartFile video, Long userId, Long interviewId);
+
+    Object processMockInterview(org.springframework.web.multipart.MultipartFile video, Long userId, Long interviewId, String sessionKey);
+
+    /**
+     * 生成模拟面试题
+     * @param userId 用户ID
+     * @return 面试题列表
+     */
+    Object generateMockInterviewQuestions(Long userId);
+
+    Object generateMockInterviewQuestions(Long userId, Long interviewId);
+
+    Object generateMockInterviewQuestions(Long userId, Long interviewId, String positionName, 
+            String positionCategory, String city, String description, String requirement);
+
+    /**
+     * 真实AI面试结束（异步处理）
+     * @param interviewId 面试ID
+     * @param video 面试视频
+     */
+    void finishRealInterview(Long interviewId, org.springframework.web.multipart.MultipartFile video);
+
+    /**
+     * 获取面试评估结果（供BOSS端使用）
+     * @param interviewId 面试ID
+     * @return 评估结果
+     */
+    InterviewEvaluationDTO getInterviewEvaluation(Long interviewId);
+
+    /**
+     * 检查面试评估结果是否存在
+     * @param interviewId 面试ID
+     * @return 是否存在
+     */
+    boolean hasEvaluation(Long interviewId);
 }

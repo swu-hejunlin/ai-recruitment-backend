@@ -124,7 +124,7 @@ public class JwtAuthenticationFilter implements Filter {
             request.setAttribute("role", role);
             request.setAttribute("user", user);
             
-            log.info("【JwtFilter】Token验证成功，用户ID：{}，角色：{}", userId, role);
+            //log.info("【JwtFilter】Token验证成功，用户ID：{}，角色：{}", userId, role);
 
             chain.doFilter(request, response);
 

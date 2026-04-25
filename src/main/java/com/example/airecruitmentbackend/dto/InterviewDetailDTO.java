@@ -90,6 +90,16 @@ public class InterviewDetailDTO {
     private String remark;
 
     /**
+     * AI面试评估分数（总分）
+     */
+    private Double aiScore;
+
+    /**
+     * AI面试评估结果（JSON格式）
+     */
+    private String aiEvaluation;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;

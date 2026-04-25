@@ -27,7 +27,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        log.info("【WebMvcConfig】使用JwtAuthenticationFilter进行认证，不再使用Interceptor");
+        //log.info("【WebMvcConfig】使用JwtAuthenticationFilter进行认证，不再使用Interceptor");
     }
 
     @Override

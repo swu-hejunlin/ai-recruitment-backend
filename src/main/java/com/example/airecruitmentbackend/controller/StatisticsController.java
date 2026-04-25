@@ -44,4 +44,14 @@ public class StatisticsController extends BaseController {
         StatisticsResponse.BossStatistics stats = statisticsService.getBossStatistics(userId);
         return Result.success("获取成功", stats);
     }
+
+    /**
+     * 获取词云数据
+     */
+    @GetMapping("/wordcloud")
+    public Result<StatisticsResponse.WordCloudResponse> getWordCloud() {
+        log.info("获取词云数据");
+        StatisticsResponse.WordCloudResponse data = statisticsService.getWordCloudData();
+        return Result.success("获取成功", data);
+    }
 }

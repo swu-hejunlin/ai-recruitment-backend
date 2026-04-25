@@ -3,6 +3,7 @@ package com.example.airecruitmentbackend.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.TableField;
 import lombok.Data;
 import java.time.LocalDateTime;
 
@@ -68,6 +69,16 @@ public class Interview {
      * 备注
      */
     private String remark;
+
+    /**
+     * AI面试评估分数（总分）
+     */
+    private Double aiScore;
+
+    /**
+     * AI面试评估结果（JSON格式）
+     */
+    private String aiEvaluation;
 
     /**
      * 创建时间

@@ -119,10 +119,10 @@ public class StatisticsServiceImpl implements StatisticsService {
                 .eq(Position::getBossId, userId));
         stats.setMyPositions(myPositions);
 
-        // 查询我发布的职位ID列表
+        // 查询我发布的职位列表
         List<Position> myPositionList = positionMapper.selectList(new LambdaQueryWrapper<Position>()
                 .eq(Position::getBossId, userId)
-                .select(Position::getId));
+                .select(Position::getId, Position::getTitle));
         List<Long> myPositionIds = myPositionList.stream()
                 .map(Position::getId)
                 .collect(Collectors.toList());
@@ -276,5 +276,109 @@ public class StatisticsServiceImpl implements StatisticsService {
         }
 
         return result.stream().limit(limit).collect(Collectors.toList());
+    }
+
+    /**
+     * 获取词云数据
+     */
+    @Override
+    public StatisticsResponse.WordCloudResponse getWordCloudData() {
+        StatisticsResponse.WordCloudResponse response = new StatisticsResponse.WordCloudResponse();
+
+        // 查询所有活跃职位
+        List<Position> positions = positionMapper.selectList(new LambdaQueryWrapper<Position>()
+                .eq(Position::getStatus, 1));
+
+        // 统计热门岗位
+        Map<String, Integer> positionMap = new HashMap<>();
+        // 统计热门技能（从tags和requirement中提取）
+        Map<String, Integer> skillMap = new HashMap<>();
+        // 统计招聘要求关键词
+        Map<String, Integer> requirementMap = new HashMap<>();
+
+        // 定义一些常见的技能关键词
+        List<String> commonSkills = Arrays.asList(
+                "Java", "Python", "Go", "C++", "C", "JavaScript", "TypeScript", "React", "Vue",
+                "Node.js", "Spring", "MyBatis", "MySQL", "Redis", "MongoDB", "Docker", "K8s",
+                "Linux", "Git", "算法", "数据结构", "网络", "并发", "微服务", "云原生"
+        );
+
+        // 定义一些常见的招聘要求关键词
+        List<String> commonRequirements = Arrays.asList(
+                "本科", "硕士", "博士", "大专", "5年", "3年", "2年", "1年", "经验",
+                "团队协作", "沟通", "学习", "抗压", "责任心", "主动", "积极", "创新"
+        );
+
+        for (Position position : positions) {
+            // 统计岗位
+            String category = position.getCategory();
+            if (category != null && !category.isEmpty()) {
+                positionMap.put(category, positionMap.getOrDefault(category, 0) + 1);
+            }
+
+            // 统计技能
+            String tags = position.getTags();
+            if (tags != null && !tags.isEmpty()) {
+                try {
+                    com.fasterxml.jackson.core.type.TypeReference<List<String>> typeRef =
+                            new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {};
+                    List<String> tagList = new com.fasterxml.jackson.databind.ObjectMapper()
+                            .readValue(tags, typeRef);
+                    for (String tag : tagList) {
+                        skillMap.put(tag, skillMap.getOrDefault(tag, 0) + 1);
+                    }
+                } catch (Exception e) {
+                    log.warn("解析tags失败: {}", tags);
+                }
+            }
+
+            // 从requirement中提取技能关键词
+            String requirement = position.getRequirement();
+            if (requirement != null && !requirement.isEmpty()) {
+                for (String skill : commonSkills) {
+                    if (requirement.contains(skill)) {
+                        skillMap.put(skill, skillMap.getOrDefault(skill, 0) + 1);
+                    }
+                }
+                for (String req : commonRequirements) {
+                    if (requirement.contains(req)) {
+                        requirementMap.put(req, requirementMap.getOrDefault(req, 0) + 1);
+                    }
+                }
+            }
+        }
+
+        // 转换为词云数据列表并排序
+        List<StatisticsResponse.WordCloudItem> skillList = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : skillMap.entrySet()) {
+            StatisticsResponse.WordCloudItem item = new StatisticsResponse.WordCloudItem();
+            item.setName(entry.getKey());
+            item.setValue(entry.getValue());
+            skillList.add(item);
+        }
+        skillList.sort((a, b) -> b.getValue().compareTo(a.getValue()));
+        response.setSkills(skillList.stream().limit(30).collect(Collectors.toList()));
+
+        List<StatisticsResponse.WordCloudItem> positionList = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : positionMap.entrySet()) {
+            StatisticsResponse.WordCloudItem item = new StatisticsResponse.WordCloudItem();
+            item.setName(entry.getKey());
+            item.setValue(entry.getValue());
+            positionList.add(item);
+        }
+        positionList.sort((a, b) -> b.getValue().compareTo(a.getValue()));
+        response.setPositions(positionList.stream().limit(30).collect(Collectors.toList()));
+
+        List<StatisticsResponse.WordCloudItem> requirementList = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : requirementMap.entrySet()) {
+            StatisticsResponse.WordCloudItem item = new StatisticsResponse.WordCloudItem();
+            item.setName(entry.getKey());
+            item.setValue(entry.getValue());
+            requirementList.add(item);
+        }
+        requirementList.sort((a, b) -> b.getValue().compareTo(a.getValue()));
+        response.setRequirements(requirementList.stream().limit(30).collect(Collectors.toList()));
+
+        return response;
     }
 }

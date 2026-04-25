@@ -26,12 +26,12 @@ public class RequestTraceFilter implements Filter {
         String uri = request.getRequestURI();
         String method = request.getMethod();
         
-        log.info("【RequestTraceFilter-开始】{} {}，线程：{}", method, uri, Thread.currentThread().getName());
+        //log.info("【RequestTraceFilter-开始】{} {}，线程：{}", method, uri, Thread.currentThread().getName());
         
         try {
             chain.doFilter(request, servletResponse);
         } finally {
-            log.info("【RequestTraceFilter-结束】{} {}，线程：{}", method, uri, Thread.currentThread().getName());
+            //log.info("【RequestTraceFilter-结束】{} {}，线程：{}", method, uri, Thread.currentThread().getName());
         }
     }
 }

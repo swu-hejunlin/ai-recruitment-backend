@@ -184,4 +184,23 @@ public class StatisticsResponse {
         private Long applicationCount;
         private BigDecimal conversionRate;
     }
+
+    /**
+     * 词云数据项
+     */
+    @Data
+    public static class WordCloudItem {
+        private String name;
+        private Integer value;
+    }
+
+    /**
+     * 词云数据响应
+     */
+    @Data
+    public static class WordCloudResponse {
+        private List<WordCloudItem> skills;
+        private List<WordCloudItem> positions;
+        private List<WordCloudItem> requirements;
+    }
 }

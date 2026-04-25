@@ -16,4 +16,9 @@ public interface StatisticsService {
      * 获取HR端统计数据
      */
     StatisticsResponse.BossStatistics getBossStatistics(Long userId);
+
+    /**
+     * 获取词云数据
+     */
+    StatisticsResponse.WordCloudResponse getWordCloudData();
 }

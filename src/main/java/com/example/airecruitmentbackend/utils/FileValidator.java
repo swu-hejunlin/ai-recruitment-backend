@@ -1,4 +1,4 @@
-package com.example.airecruitmentbackend.util;
+package com.example.airecruitmentbackend.utils;
 
 import com.example.airecruitmentbackend.exception.FileUploadException;
 import org.springframework.web.multipart.MultipartFile;

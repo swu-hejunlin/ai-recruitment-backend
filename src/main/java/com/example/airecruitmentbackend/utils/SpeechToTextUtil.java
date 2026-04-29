@@ -1,4 +1,4 @@
-package com.example.airecruitmentbackend.util;
+package com.example.airecruitmentbackend.utils;
 
 import cn.hutool.json.JSONUtil;
 import com.google.gson.Gson;

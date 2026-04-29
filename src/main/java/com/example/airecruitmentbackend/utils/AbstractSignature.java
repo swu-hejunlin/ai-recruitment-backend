@@ -1,4 +1,4 @@
-package com.example.airecruitmentbackend.util;
+package com.example.airecruitmentbackend.utils;
 
 import java.net.MalformedURLException;
 import java.net.URL;

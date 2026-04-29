@@ -355,6 +355,172 @@ CREATE TABLE `favorite` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='收藏表';
 
 -- ========================================
+-- 人才画像表
+-- 存储人才的结构化画像信息
+-- ========================================
+DROP TABLE IF EXISTS `talent_profile`;
+CREATE TABLE `talent_profile` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `skills` TEXT DEFAULT NULL COMMENT '技能标签列表（JSON格式）',
+    `education` VARCHAR(20) DEFAULT NULL COMMENT '学历：1-高中及以下，2-大专，3-本科，4-硕士，5-博士',
+    `work_years` INT DEFAULT NULL COMMENT '工作年限',
+    `salary_expectation` DECIMAL(10,2) DEFAULT NULL COMMENT '期望薪资（K/月）',
+    `current_salary` DECIMAL(10,2) DEFAULT NULL COMMENT '当前薪资（K/月）',
+    `talent_tags` TEXT DEFAULT NULL COMMENT '人才标签列表（JSON格式）',
+    `description_summary` VARCHAR(500) DEFAULT NULL COMMENT '个人简介摘要',
+    `strengths_summary` TEXT DEFAULT NULL COMMENT '优势亮点摘要',
+    `career_goals` VARCHAR(500) DEFAULT NULL COMMENT '职业目标',
+    `match_keywords` TEXT DEFAULT NULL COMMENT '匹配关键词（JSON格式）',
+    `ai_evaluation` TEXT DEFAULT NULL COMMENT 'AI综合评估',
+    `embedding_vector` TEXT DEFAULT NULL COMMENT '文本嵌入向量（JSON格式，用于语义相似度计算）',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_user_id` (`user_id`),
+    KEY `idx_work_years` (`work_years`),
+    KEY `idx_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='人才画像表';
+
+-- ========================================
+-- 岗位画像表
+-- 存储岗位的结构化画像信息
+-- ========================================
+DROP TABLE IF EXISTS `job_profile`;
+CREATE TABLE `job_profile` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `position_id` BIGINT NOT NULL COMMENT '岗位ID',
+    `skills` TEXT DEFAULT NULL COMMENT '技能标签列表（JSON格式）',
+    `education_require` VARCHAR(20) DEFAULT NULL COMMENT '学历要求：1-高中及以下，2-大专，3-本科，4-硕士，5-博士',
+    `experience_require` VARCHAR(20) DEFAULT NULL COMMENT '经验要求：1-不限，2-1年以下，3-1-3年，4-3-5年，5-5-10年，6-10年以上',
+    `salary_min` DECIMAL(10,2) DEFAULT NULL COMMENT '最低薪资（K/月）',
+    `salary_max` DECIMAL(10,2) DEFAULT NULL COMMENT '最高薪资（K/月）',
+    `job_tags` TEXT DEFAULT NULL COMMENT '岗位标签列表（JSON格式）',
+    `description_summary` VARCHAR(500) DEFAULT NULL COMMENT '岗位描述摘要',
+    `responsibilities_summary` VARCHAR(500) DEFAULT NULL COMMENT '工作职责摘要',
+    `requirements_summary` VARCHAR(500) DEFAULT NULL COMMENT '任职要求摘要',
+    `company_benefits` TEXT DEFAULT NULL COMMENT '公司福利',
+    `match_keywords` TEXT DEFAULT NULL COMMENT '匹配关键词（JSON格式）',
+    `embedding_vector` TEXT DEFAULT NULL COMMENT '文本嵌入向量（JSON格式，用于语义相似度计算）',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_position_id` (`position_id`),
+    KEY `idx_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='岗位画像表';
+
+-- ========================================
+-- 岗位匹配记录表
+-- 存储岗位与人才的匹配记录
+-- ========================================
+DROP TABLE IF EXISTS `job_match_record`;
+CREATE TABLE `job_match_record` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_id` BIGINT NOT NULL COMMENT '求职者ID',
+    `position_id` BIGINT NOT NULL COMMENT '岗位ID',
+    `match_score` DECIMAL(5,2) DEFAULT NULL COMMENT '匹配分数（0-100）',
+    `skill_match_rate` DECIMAL(5,2) DEFAULT NULL COMMENT '技能匹配率（0-100）',
+    `experience_match_rate` DECIMAL(5,2) DEFAULT NULL COMMENT '经验匹配率（0-100）',
+    `education_match_rate` DECIMAL(5,2) DEFAULT NULL COMMENT '学历匹配率（0-100）',
+    `salary_match_rate` DECIMAL(5,2) DEFAULT NULL COMMENT '薪资匹配率（0-100）',
+    `match_details` TEXT DEFAULT NULL COMMENT '匹配详情（JSON格式）',
+    `is_viewed` TINYINT DEFAULT 0 COMMENT '是否查看：0-否，1-是',
+    `is_applied` TINYINT DEFAULT 0 COMMENT '是否申请：0-否，1-是',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_user_id` (`user_id`),
+    KEY `idx_position_id` (`position_id`),
+    KEY `idx_match_score` (`match_score`),
+    KEY `idx_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='岗位匹配记录表';
+
+-- ========================================
+-- 人才匹配记录表
+-- 存储人才与岗位的匹配记录（HR视角）
+-- ========================================
+DROP TABLE IF EXISTS `talent_match_record`;
+CREATE TABLE `talent_match_record` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `boss_id` BIGINT NOT NULL COMMENT 'BOSS/HR ID',
+    `job_seeker_id` BIGINT NOT NULL COMMENT '求职者ID',
+    `position_id` BIGINT NOT NULL COMMENT '岗位ID',
+    `match_score` DECIMAL(5,2) DEFAULT NULL COMMENT '匹配分数（0-100）',
+    `skill_match_rate` DECIMAL(5,2) DEFAULT NULL COMMENT '技能匹配率（0-100）',
+    `experience_match_rate` DECIMAL(5,2) DEFAULT NULL COMMENT '经验匹配率（0-100）',
+    `education_match_rate` DECIMAL(5,2) DEFAULT NULL COMMENT '学历匹配率（0-100）',
+    `salary_match_rate` DECIMAL(5,2) DEFAULT NULL COMMENT '薪资匹配率（0-100）',
+    `match_details` TEXT DEFAULT NULL COMMENT '匹配详情（JSON格式）',
+    `is_viewed` TINYINT DEFAULT 0 COMMENT '是否查看：0-否，1-是',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_boss_id` (`boss_id`),
+    KEY `idx_job_seeker_id` (`job_seeker_id`),
+    KEY `idx_position_id` (`position_id`),
+    KEY `idx_match_score` (`match_score`),
+    KEY `idx_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='人才匹配记录表';
+
+-- ========================================
+-- 岗位技能标签表
+-- 存储岗位的技能标签信息
+-- ========================================
+DROP TABLE IF EXISTS `job_skill_tag`;
+CREATE TABLE `job_skill_tag` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `position_id` BIGINT NOT NULL COMMENT '岗位ID',
+    `skill_tag` VARCHAR(100) NOT NULL COMMENT '技能标签',
+    `skill_level` VARCHAR(20) DEFAULT NULL COMMENT '技能等级：required-必须，preferred-优先',
+    `proficiency_weight` INT DEFAULT 50 COMMENT '熟练度权重（1-100）',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_position_id` (`position_id`),
+    KEY `idx_skill_tag` (`skill_tag`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='岗位技能标签表';
+
+-- ========================================
+-- 人才技能标签表
+-- 存储人才的技能标签信息
+-- ========================================
+DROP TABLE IF EXISTS `talent_skill_tag`;
+CREATE TABLE `talent_skill_tag` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `skill_tag` VARCHAR(100) NOT NULL COMMENT '技能标签',
+    `proficiency_level` TINYINT DEFAULT NULL COMMENT '熟练度等级（1-5）：1-了解，2-熟悉，3-掌握，4-精通，5-专家',
+    `years_used` INT DEFAULT NULL COMMENT '使用年限',
+    `last_used_time` DATE DEFAULT NULL COMMENT '最后使用时间',
+    `is_highlight` TINYINT DEFAULT 0 COMMENT '是否亮点技能：0-否，1-是',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_user_id` (`user_id`),
+    KEY `idx_skill_tag` (`skill_tag`),
+    KEY `idx_is_highlight` (`is_highlight`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='人才技能标签表';
+
+-- ========================================
+-- 面试评估结果表
+-- 存储AI面试的评估结果
+-- ========================================
+DROP TABLE IF EXISTS `interview_evaluation`;
+CREATE TABLE `interview_evaluation` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '评估ID',
+    `interview_id` BIGINT NOT NULL COMMENT '面试ID',
+    `score` DECIMAL(5,2) DEFAULT NULL COMMENT '评估分数(0-100)',
+    `evaluation_text` TEXT DEFAULT NULL COMMENT '评估文本(优势+不足)',
+    `language_score` DECIMAL(5,2) DEFAULT NULL COMMENT '语言表达分数',
+    `logic_score` DECIMAL(5,2) DEFAULT NULL COMMENT '逻辑思维分数',
+    `professional_score` DECIMAL(5,2) DEFAULT NULL COMMENT '专业能力分数',
+    `suggestions` TEXT DEFAULT NULL COMMENT '改进建议(JSON数组)',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_interview_id` (`interview_id`),
+    KEY `idx_score` (`score`),
+    KEY `idx_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='面试评估结果表';
+
+-- ========================================
 -- 预留扩展
 -- ========================================
 

@@ -36,12 +36,12 @@ aliyun:
 
 ### 2. OssUtil（工具类）
 - 作用：提供文件上传、下载、删除等基础功能
-- 位置：`com.example.airecruitmentbackend.util.OssUtil`
+- 位置：`com.example.airecruitmentbackend.utils.OssUtil`
 - 使用方式：在Service中自动注入
 
 ### 3. FileValidator（文件校验类）
 - 作用：校验文件大小、类型等
-- 位置：`com.example.airecruitmentbackend.util.FileValidator`
+- 位置：`com.example.airecruitmentbackend.utils.FileValidator`
 - 使用方式：在Service中自动注入
 
 ### 4. FileConstants（常量类）

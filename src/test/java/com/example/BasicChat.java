@@ -3,10 +3,14 @@ package com.example;
 import ai.z.openapi.ZhipuAiClient;
 import ai.z.openapi.service.model.*;
 import ai.z.openapi.core.Constants;
+import com.alibaba.dashscope.embeddings.TextEmbedding;
+
 import java.util.Arrays;
 
 public class BasicChat {
     public static void main(String[] args) {
+
+        TextEmbedding textEmbedding = new TextEmbedding();
         // 初始化客户端
         ZhipuAiClient client = ZhipuAiClient.builder().ofZHIPU()
                 .apiKey(System.getenv("ZAI_API_KEY"))

@@ -1,4 +1,4 @@
-package com.example.airecruitmentbackend.util;
+package com.example.airecruitmentbackend.utils;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;

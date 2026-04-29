@@ -48,9 +48,9 @@ public class AIConstant {
      */
     public static final String Free_VISION_MODEL = "glm-4.6v-flash";
 
-    public static final String LOW_MODEL = "glm-4.5-flash";
+    public static final String LOW_MODEL = "glm-4-flash";
 
-    public static final String DEFAULT_VISION_MODEL = "glm-4.6v";
+    public static final String DEFAULT_VISION_MODEL = "glm-4.6v-flashx";
     public static final String FLASH_FREE_MODEL = "glm-4-Flash-250414";
 
     /**

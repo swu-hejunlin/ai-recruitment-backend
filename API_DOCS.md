@@ -1,10 +1,10 @@
 # AI智能招聘平台 - 接口文档
 
 ## 接口说明
-本文档描述AI智能招聘平台的完整API接口，包含用户登录、身份切换、求职者信息管理、企业信息管理、文件上传、智能简历分析、岗位画像、人才画像、岗位推荐等功能。
+本文档描述AI智能招聘平台的完整API接口，包含用户登录、身份切换、求职者信息管理、企业信息管理、文件上传、智能简历分析、岗位画像、人才画像、岗位推荐、面试管理、通知、收藏等功能。
 
 ## 业务规则
-- **手机号唯一性**：同一个手机号只能有一个账号
+- **手机号唯一**：同一个手机号只能有一个账号
 - **身份切换**：如果已注册用户以不同角色登录，系统会提示身份冲突，需要用户确认切换身份
 - **自动注册**：首次使用手机号登录时，系统会自动创建用户
 - **AI画像**：系统提供岗位画像和人才画像功能，基于AI技术自动提取关键信息
@@ -26,1026 +26,1310 @@
 |------|---------|------|
 | 1 | 求职者 | 可投递简历、管理个人信息、查看投递记录、使用AI画像和推荐功能 |
 | 2 | 企业HR | 可发布职位、查看投递、管理企业信息 |
-| 3 | 管理员 | 预留 |
 
 > **安全说明**：系统在后端对关键接口实施了角色校验和数据归属权校验，确保用户只能操作自己的数据。
 
 ---
 
+## 统一返回格式
+
+### 成功响应
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {},
+  "timestamp": 1714032000000
+}
+```
+
+### 错误响应
+```json
+{
+  "code": 400,
+  "message": "错误描述",
+  "data": null,
+  "timestamp": 1714032000000
+}
+```
+
+### 常用状态码
+| code | 说明 |
+|------|------|
+| 200 | 成功 |
+| 400 | 业务错误（参数错误、数据不存在等） |
+| 401 | 未授权（Token无效或过期） |
+| 403 | 权限不足 |
+| 500 | 服务器内部错误 |
+
+---
+
 ## 接口认证要求汇总
 
-#### 一、公开接口（无需登录）
-
+### 一、公开接口（无需登录）
 | 接口地址 | 说明 |
 |----------|------|
 | `POST /api/user/send-code` | 发送验证码 |
 | `POST /api/user/login` | 验证码登录 |
+| `POST /api/user/switch-role` | 身份切换 |
 | `GET /api/position/list` | 职位列表（搜索筛选） |
-| `GET /api/position/detail?id=1` | 职位详情 |
+| `GET /api/position/detail` | 职位详情 |
 | `GET /api/position/latest` | 最新职位（首页推荐） |
 | `GET /api/position/hot` | 热门职位（首页推荐） |
-| `GET /api/position/company-info?positionId=1` | 职位对应的公司信息 |
-| `GET /api/position/detail-with-company?id=1` | 职位详情（含公司信息） |
+| `GET /api/position/company-info` | 职位对应的公司信息 |
+| `GET /api/position/detail-with-company` | 职位详情（含公司信息） |
 | `GET /api/company/{id}` | 根据公司ID查看公司详情 |
 
-#### 二、需要登录认证的接口
+### 二、需要登录认证的接口
 
-| 角色 | 接口地址 | 说明 |
+| 模块 | 接口地址 | 说明 |
 |------|----------|------|
-| **求职者** | `GET /api/job-seeker/info` | 获取自己的完整简历信息 |
-| **求职者** | `POST /api/job-seeker/info` | 创建或更新求职者信息 |
-| **求职者** | `PUT /api/job-seeker/info` | 更新求职者基本信息 |
-| **求职者** | `POST /api/job-seeker/resume` | 上传简历 |
-| **求职者** | `GET /api/job-seeker/resume` | 获取简历 |
-| **投递** | `POST /api/application/apply` | 投递简历（仅求职者，需校验角色） |
-| **投递** | `GET /api/application/seeker/list` | 查看自己的投递记录列表 |
-| **投递** | `DELETE /api/application/{id}` | 取消投递 |
-| **投递** | `GET /api/application/{id}` | 查看投递详情 |
-| **Boss** | `GET /api/application/company/list` | Boss查看收到的投递列表 |
-| **Boss** | `PUT /api/application/{id}/status` | Boss更新投递状态 |
-| **Boss** | `GET /api/application/job-seeker/resume` | Boss查看完整在线简历（仅企业HR，已校验归属权） |
-| **Boss** | `PUT /api/application/resume-viewed` | Boss标记简历为已查看 |
-| **智能分析** | `POST /api/resume/upload-and-analyze` | 上传并分析简历（需登录） |
-| **智能分析** | `POST /api/resume/analyze` | 分析已有简历（需登录） |
-| **智能填充** | `POST /api/resume/smart-fill` | 智能填充简历信息（需登录） |
-| **岗位画像** | `POST /api/job-profile/generate/{positionId}` | 生成岗位画像（需登录） |
-| **岗位画像** | `GET /api/job-profile/{positionId}` | 获取岗位画像（需登录） |
-| **岗位画像** | `PUT /api/job-profile/update/{positionId}` | 更新岗位画像（需登录） |
-| **岗位画像** | `DELETE /api/job-profile/{positionId}` | 删除岗位画像（需登录） |
-| **人才画像** | `POST /api/talent-profile/generate` | 生成人才画像（需登录） |
-| **人才画像** | `GET /api/talent-profile` | 获取人才画像（需登录） |
-| **人才画像** | `PUT /api/talent-profile/update` | 更新人才画像（需登录） |
-| **人才画像** | `DELETE /api/talent-profile` | 删除人才画像（需登录） |
-| **岗位推荐** | `GET /api/job-recommend` | 获取岗位推荐列表（需登录） |
-| **岗位推荐** | `GET /api/job-recommend/match/{jobId}` | 获取匹配度详情（需登录） |
-| **岗位推荐** | `POST /api/job-recommend/batch-generate` | 批量生成匹配记录（需登录） |
-| **岗位推荐** | `PUT /api/job-recommend/viewed/{recordId}` | 标记为已查看（需登录） |
-| **数据统计** | `GET /api/statistics/seeker` | 获取求职者端统计数据（需登录） |
-| **数据统计** | `GET /api/statistics/boss` | 获取HR端统计数据（需登录） |
+| 求职者 | `GET /api/job-seeker/info` | 获取求职者完整信息 |
+| 求职者 | `PUT /api/job-seeker/update` | 更新求职者信息 |
+| 求职者 | `POST /api/job-seeker/avatar` | 上传头像 |
+| 求职者 | `GET /api/job-seeker/avatar` | 获取头像 |
+| 求职者 | `POST /api/job-seeker/resume` | 上传简历 |
+| 求职者 | `GET /api/job-seeker/resume` | 获取简历 |
+| 教育经历 | `GET /api/education/list` | 获取教育经历列表 |
+| 教育经历 | `POST /api/education/add` | 新增教育经历 |
+| 教育经历 | `PUT /api/education/update` | 更新教育经历 |
+| 教育经历 | `DELETE /api/education/delete` | 删除教育经历 |
+| 工作经历 | `GET /api/experience/list` | 获取工作/实习经历列表 |
+| 工作经历 | `POST /api/experience/add` | 新增工作/实习经历 |
+| 工作经历 | `PUT /api/experience/update` | 更新工作/实习经历 |
+| 工作经历 | `DELETE /api/experience/delete` | 删除工作/实习经历 |
+| 项目经历 | `GET /api/project/list` | 获取项目经历列表 |
+| 项目经历 | `POST /api/project/add` | 新增项目经历 |
+| 项目经历 | `PUT /api/project/update` | 更新项目经历 |
+| 项目经历 | `DELETE /api/project/delete` | 删除项目经历 |
+| 企业 | `GET /api/company/info` | 获取当前企业信息 |
+| 企业 | `PUT /api/company/update` | 更新企业信息 |
+| 企业 | `POST /api/company/logo` | 上传企业Logo |
+| 企业 | `POST /api/company/license` | 上传营业执照 |
+| 职位 | `POST /api/position/add` | 发布职位 |
+| 职位 | `PUT /api/position/update` | 更新职位 |
+| 职位 | `DELETE /api/position/delete` | 删除职位 |
+| 职位 | `GET /api/position/boss/list` | Boss查看自己的职位 |
+| 职位 | `PUT /api/position/close` | 关闭职位 |
+| 职位 | `PUT /api/position/open` | 开启职位 |
+| 职位 | `GET /api/position/company` | 查看公司下的职位 |
+| 投递 | `POST /api/application/apply` | 投递简历 |
+| 投递 | `GET /api/application/boss/list` | Boss查看收到的投递 |
+| 投递 | `GET /api/application/seeker/list` | 求职者查看投递记录 |
+| 投递 | `GET /api/application/detail` | 查看投递详情 |
+| 投递 | `GET /api/application/position` | 查看投递对应的职位 |
+| 投递 | `GET /api/application/company` | 查看投递对应的公司 |
+| 投递 | `GET /api/application/job-seeker/simple` | Boss查看求职者简要信息 |
+| 投递 | `GET /api/application/job-seeker/resume` | Boss查看求职者完整简历 |
+| 投递 | `PUT /api/application/read` | 标记简历已查看 |
+| 投递 | `PUT /api/application/status` | 更新投递状态 |
+| 通知 | `GET /api/notification/list` | 通知列表 |
+| 通知 | `GET /api/notification/unread-count` | 未读通知数量 |
+| 通知 | `PUT /api/notification/read` | 标记通知已读 |
+| 通知 | `PUT /api/notification/read-all` | 标记所有通知已读 |
+| 收藏 | `POST /api/favorite/add` | 添加收藏 |
+| 收藏 | `DELETE /api/favorite/remove` | 取消收藏 |
+| 收藏 | `GET /api/favorite/list` | 收藏列表 |
+| 收藏 | `GET /api/favorite/check` | 检查是否已收藏 |
+| 面试 | `POST /api/interview/create` | 创建面试邀请 |
+| 面试 | `PUT /api/interview/{id}/status` | 更新面试状态 |
+| 面试 | `GET /api/interview/company/list` | 企业面试列表 |
+| 面试 | `GET /api/interview/job-seeker/list` | 求职者面试列表 |
+| 面试 | `GET /api/interview/{id}` | 面试详情 |
+| 面试 | `DELETE /api/interview/{id}` | 删除面试 |
+| 面试 | `POST /api/interview/mock` | 提交模拟面试 |
+| 面试 | `GET /api/interview/mock/questions` | 生成面试题 |
+| 面试 | `POST /api/interview/finish` | 结束AI面试 |
+| 面试 | `GET /api/interview/evaluation/{id}` | 获取面试评估 |
+| 面试 | `GET /api/interview/evaluation/{id}/exists` | 检查评估是否存在 |
+| 简历AI | `POST /api/resume/analyze` | 分析简历 |
+| 简历AI | `POST /api/resume/upload-and-analyze` | 上传并分析简历 |
+| 简历AI | `POST /api/resume/smart-fill` | 智能填充简历 |
+| 岗位画像 | `POST /api/job-profile/generate/{positionId}` | 生成岗位画像 |
+| 岗位画像 | `GET /api/job-profile/{positionId}` | 获取岗位画像 |
+| 岗位画像 | `PUT /api/job-profile/update/{positionId}` | 更新岗位画像 |
+| 岗位画像 | `DELETE /api/job-profile/{positionId}` | 删除岗位画像 |
+| 人才画像 | `POST /api/talent-profile/generate` | 生成人才画像 |
+| 人才画像 | `GET /api/talent-profile` | 获取人才画像 |
+| 人才画像 | `PUT /api/talent-profile/update` | 更新人才画像 |
+| 人才画像 | `DELETE /api/talent-profile` | 删除人才画像 |
+| 推荐 | `GET /api/job-recommend` | 岗位推荐列表 |
+| 推荐 | `GET /api/job-recommend/match/{positionId}` | 匹配度详情 |
+| 推荐 | `POST /api/job-recommend/batch-generate` | 批量生成匹配 |
+| 推荐 | `PUT /api/job-recommend/viewed/{recordId}` | 标记已查看 |
+| 人才推荐 | `GET /api/talent-recommend` | 人才推荐列表（HR） |
+| 人才推荐 | `GET /api/talent-recommend/match` | 人才匹配详情（HR） |
+| 人才推荐 | `POST /api/talent-recommend/batch-generate` | 批量生成人才匹配（HR） |
+| 人才推荐 | `PUT /api/talent-recommend/viewed/{recordId}` | 标记人才已查看（HR） |
+| 统计 | `GET /api/statistics/seeker` | 求职者统计 |
+| 统计 | `GET /api/statistics/boss` | HR统计 |
+| 统计 | `GET /api/statistics/wordcloud` | 词云数据 |
+| 文件 | `POST /api/file/upload` | 上传文件 |
+| 文件 | `POST /api/file/upload-batch` | 批量上传 |
+| 文件 | `DELETE /api/file/delete` | 删除文件 |
 
 ---
 
-## 一、用户登录
+## 1. 用户认证模块
 
 ### 1.1 发送验证码
-
-- **接口描述**: 向指定手机号发送验证码
-- **请求方式**: POST
-- **请求路径**: `/api/user/send-code`
-- **认证要求**: 公开接口
+- **URL**: `POST /api/user/send-code`
+- **认证**: 无需登录
 
 **请求参数**:
-
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| phone | String | 是 | 手机号 |
-
-**请求示例**:
 ```json
 {
   "phone": "13800138000"
 }
 ```
 
-**成功响应**:
+**响应示例**:
 ```json
 {
-  "code": 1000,
-  "message": "发送成功",
-  "data": null
+  "code": 200,
+  "message": "验证码发送成功",
+  "data": null,
+  "timestamp": 1714032000000
 }
 ```
 
-### 1.2 验证码登录
+> 验证码有效期5分钟，存储在Redis中。开发环境验证码会打印在后端控制台。
 
-- **接口描述**: 使用手机号和验证码登录
-- **请求方式**: POST
-- **请求路径**: `/api/user/login`
-- **认证要求**: 公开接口
+### 1.2 验证码登录
+- **URL**: `POST /api/user/login`
+- **认证**: 无需登录
 
 **请求参数**:
-
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| phone | String | 是 | 手机号 |
-| code | String | 是 | 验证码 |
-
-**请求示例**:
 ```json
 {
   "phone": "13800138000",
-  "code": "123456"
+  "code": "123456",
+  "role": 1
 }
 ```
 
-**成功响应**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| phone | String | 是 | 手机号 |
+| code | String | 是 | 验证码 |
+| role | Integer | 是 | 角色：1-求职者，2-企业HR |
+
+**响应示例**:
 ```json
 {
-  "code": 1000,
+  "code": 200,
   "message": "登录成功",
   "data": {
-    "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIyMjIzMjMxMjMxMjMxMjMxMjMifQ...",
-    "userId": 2,
-    "role": 1,
-    "roleName": "求职者",
-    "username": "张三",
-    "phone": "13800138000"
-  }
+    "token": "eyJhbGciOiJIUzI1NiJ9...",
+    "userInfo": {
+      "userId": 1,
+      "phone": "13800138000",
+      "role": 1
+    }
+  },
+  "timestamp": 1714032000000
+}
+```
+
+> 如果手机号已注册但角色不同，返回身份冲突提示，需调用切换角色接口。
+
+### 1.3 身份切换
+- **URL**: `POST /api/user/switch-role`
+- **认证**: 无需登录
+
+**请求参数**:
+```json
+{
+  "phone": "13800138000",
+  "code": "123456",
+  "role": 2
+}
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "身份切换成功",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiJ9...",
+    "userInfo": {
+      "userId": 1,
+      "phone": "13800138000",
+      "role": 2
+    }
+  },
+  "timestamp": 1714032000000
 }
 ```
 
 ---
 
-## 二、求职者信息管理
+## 2. 求职者信息模块
 
-### 2.1 获取求职者信息
+### 2.1 获取求职者完整信息
+- **URL**: `GET /api/job-seeker/info`
+- **认证**: 需要登录（求职者）
 
-- **接口描述**: 获取当前求职者的完整信息
-- **请求方式**: GET
-- **请求路径**: `/api/job-seeker/info`
-- **认证要求**: 需要登录认证
-
-**成功响应**:
+**响应示例**:
 ```json
 {
-  "code": 1000,
-  "message": "获取成功",
+  "code": 200,
+  "message": "操作成功",
   "data": {
     "id": 1,
-    "userId": 2,
+    "userId": 1,
     "name": "张三",
     "gender": 1,
-    "age": 28,
     "phone": "13800138000",
     "email": "zhangsan@example.com",
-    "city": "北京市",
-    "address": "朝阳区",
-    "workYears": 5,
-    "currentSalary": 20.00,
-    "expectedSalary": 30.00,
+    "birthday": "1995-06-15",
+    "city": "北京",
     "currentStatus": 1,
-    "introduction": "具有多年互联网开发经验...",
-    "education": 3,
-    "avatar": "https://example.com/avatar.jpg"
-  }
+    "educationLevel": 3,
+    "workYears": 3,
+    "expectedSalaryMin": 15000,
+    "expectedSalaryMax": 25000,
+    "expectedCity": "北京",
+    "expectedPosition": "Java工程师",
+    "skills": ["Java", "Spring Boot", "MySQL"],
+    "selfIntroduction": "3年Java开发经验",
+    "avatarUrl": "https://oss.example.com/avatar/1.jpg",
+    "resumeUrl": "https://oss.example.com/resume/1.pdf",
+    "educationList": [...],
+    "experienceList": [...],
+    "projectList": [...]
+  },
+  "timestamp": 1714032000000
 }
 ```
 
-### 2.2 创建求职者信息
-
-- **接口描述**: 创建当前用户的求职者信息
-- **请求方式**: POST
-- **请求路径**: `/api/job-seeker/info`
-- **认证要求**: 需要登录认证
+### 2.2 更新求职者信息
+- **URL**: `PUT /api/job-seeker/update`
+- **认证**: 需要登录（求职者）
 
 **请求参数**:
-
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| name | String | 是 | 姓名 |
-| gender | Integer | 否 | 性别：1-男，2-女 |
-| age | Integer | 否 | 年龄 |
-| phone | String | 否 | 手机号 |
-| email | String | 否 | 邮箱 |
-| city | String | 否 | 城市 |
-| address | String | 否 | 详细地址 |
-| education | Integer | 否 | 学历：1-高中及以下，2-大专，3-本科，4-硕士，5-博士 |
-| workYears | Integer | 否 | 工作年限 |
-| currentStatus | Integer | 否 | 当前状态：1-在职，2-离职，3-在读学生 |
-| currentSalary | BigDecimal | 否 | 当前薪资（K/月） |
-| expectedSalary | BigDecimal | 否 | 期望薪资（K/月） |
-| introduction | String | 否 | 个人简介 |
-
-**成功响应**:
 ```json
 {
-  "code": 1000,
-  "message": "创建成功",
-  "data": {
-    "id": 1,
-    "userId": 2,
-    "name": "张三",
-    ...
-  }
+  "name": "张三",
+  "gender": 1,
+  "email": "zhangsan@example.com",
+  "birthday": "1995-06-15",
+  "city": "北京",
+  "currentStatus": 1,
+  "educationLevel": 3,
+  "workYears": 3,
+  "expectedSalaryMin": 15000,
+  "expectedSalaryMax": 25000,
+  "expectedCity": "北京",
+  "expectedPosition": "Java工程师",
+  "skills": ["Java", "Spring Boot", "MySQL"],
+  "selfIntroduction": "3年Java开发经验"
 }
 ```
 
-### 2.3 更新求职者信息
-
-- **接口描述**: 更新当前求职者的信息
-- **请求方式**: PUT
-- **请求路径**: `/api/job-seeker/info`
-- **认证要求**: 需要登录认证
-
-**请求参数**: 同2.2创建求职者信息
-
-### 2.4 上传简历
-
-- **接口描述**: 上传求职者的简历附件
-- **请求方式**: POST
-- **请求路径**: `/api/job-seeker/resume`
-- **认证要求**: 需要登录认证
-- **Content-Type**: multipart/form-data
+### 2.3 上传头像
+- **URL**: `POST /api/job-seeker/avatar`
+- **认证**: 需要登录（求职者）
+- **Content-Type**: `multipart/form-data`
 
 **请求参数**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| file | File | 是 | 头像图片（支持jpg/png，最大2MB） |
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| file | File | 是 | 简历文件 |
+### 2.4 获取头像
+- **URL**: `GET /api/job-seeker/avatar`
+- **认证**: 需要登录（求职者）
 
-**成功响应**:
+### 2.5 上传简历
+- **URL**: `POST /api/job-seeker/resume`
+- **认证**: 需要登录（求职者）
+- **Content-Type**: `multipart/form-data`
+
+**请求参数**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| file | File | 是 | 简历文件（支持pdf/doc/docx，最大10MB） |
+
+### 2.6 获取简历
+- **URL**: `GET /api/job-seeker/resume`
+- **认证**: 需要登录（求职者）
+
+---
+
+## 3. 教育经历模块
+
+### 3.1 获取教育经历列表
+- **URL**: `GET /api/education/list`
+- **认证**: 需要登录（求职者）
+
+### 3.2 新增教育经历
+- **URL**: `POST /api/education/add`
+- **认证**: 需要登录（求职者）
+
+**请求参数**:
 ```json
 {
-  "code": 1000,
-  "message": "上传简历成功",
-  "data": {
-    "resumeUrl": "https://cdn.example.com/resumes/xxx.pdf"
-  }
+  "school": "北京大学",
+  "major": "计算机科学与技术",
+  "educationLevel": 3,
+  "startTime": "2015-09",
+  "endTime": "2019-06"
 }
 ```
 
-### 2.5 删除简历
+### 3.3 更新教育经历
+- **URL**: `PUT /api/education/update`
+- **认证**: 需要登录（求职者）
 
-- **接口描述**: 删除当前求职者的简历
-- **请求方式**: DELETE
-- **请求路径**: `/api/job-seeker/resume`
-- **认证要求**: 需要登录认证
+### 3.4 删除教育经历
+- **URL**: `DELETE /api/education/delete`
+- **认证**: 需要登录（求职者）
 
-**成功响应**:
+**请求参数**:
 ```json
 {
-  "code": 1000,
-  "message": "删除成功",
-  "data": null
-}
-```
-
-### 2.6 查看简历
-
-- **接口描述**: 获取当前求职者的简历URL
-- **请求方式**: GET
-- **请求路径**: `/api/job-seeker/resume`
-- **认证要求**: 需要登录认证
-
-**成功响应**:
-```json
-{
-  "code": 1000,
-  "message": "获取简历成功",
-  "data": {
-    "resumeUrl": "https://cdn.example.com/resumes/xxx.pdf",
-    "resumeName": "张三_简历.pdf"
-  }
+  "id": 1
 }
 ```
 
 ---
 
-## 三、投递管理
+## 4. 工作/实习经历模块
 
-### 3.1 投递简历
+### 4.1 获取工作经历列表
+- **URL**: `GET /api/experience/list`
+- **认证**: 需要登录（求职者）
 
-- **接口描述**: 求职者投递简历到指定职位
-- **请求方式**: POST
-- **请求路径**: `/api/application/apply`
-- **认证要求**: 需要登录认证（求职者）
+### 4.2 新增工作经历
+- **URL**: `POST /api/experience/add`
+- **认证**: 需要登录（求职者）
 
 **请求参数**:
-
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| positionId | Long | 是 | 职位ID |
-| resumeId | Long | 否 | 简历ID |
-
-**成功响应**:
 ```json
 {
-  "code": 1000,
-  "message": "投递成功",
-  "data": {
-    "id": 1,
-    "positionId": 1,
-    "seekerId": 2,
-    "status": "pending",
-    "createdAt": "2026-04-18T10:00:00"
-  }
+  "companyName": "字节跳动",
+  "position": "Java开发工程师",
+  "startTime": "2019-07",
+  "endTime": "2022-03",
+  "description": "负责后端服务开发",
+  "isIntern": false
 }
 ```
 
-### 3.2 查看投递记录
+### 4.3 更新工作经历
+- **URL**: `PUT /api/experience/update`
+- **认证**: 需要登录（求职者）
 
-- **接口描述**: 查看当前用户的投递记录
-- **请求方式**: GET
-- **请求路径**: `/api/application/seeker/list`
-- **认证要求**: 需要登录认证（求职者）
-
-**成功响应**:
-```json
-{
-  "code": 1000,
-  "message": "获取成功",
-  "data": [
-    {
-      "id": 1,
-      "positionId": 1,
-      "positionTitle": "Java开发工程师",
-      "companyName": "某科技有限公司",
-      "status": "pending",
-      "createdAt": "2026-04-18T10:00:00"
-    }
-  ]
-}
-```
-
-### 3.3 取消投递
-
-- **接口描述**: 取消指定的投递记录
-- **请求方式**: DELETE
-- **请求路径**: `/api/application/{id}`
-- **认证要求**: 需要登录认证
-
-**成功响应**:
-```json
-{
-  "code": 1000,
-  "message": "取消成功",
-  "data": null
-}
-```
+### 4.4 删除工作经历
+- **URL**: `DELETE /api/experience/delete`
+- **认证**: 需要登录（求职者）
 
 ---
 
-## 四、职位管理
+## 5. 项目经历模块
 
-### 4.1 职位列表
+### 5.1 获取项目经历列表
+- **URL**: `GET /api/project/list`
+- **认证**: 需要登录（求职者）
 
-- **接口描述**: 获取职位列表（支持搜索筛选）
-- **请求方式**: GET
-- **请求路径**: `/api/position/list`
-- **认证要求**: 公开接口
+### 5.2 新增项目经历
+- **URL**: `POST /api/project/add`
+- **认证**: 需要登录（求职者）
 
 **请求参数**:
+```json
+{
+  "projectName": "智能招聘平台",
+  "role": "后端开发",
+  "startTime": "2022-01",
+  "endTime": "2022-06",
+  "description": "负责AI推荐模块开发",
+  "techStack": "Java, Spring Boot, MySQL"
+}
+```
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| title | String | 否 | 搜索关键词（职位名称、描述或要求） |
+### 5.3 更新项目经历
+- **URL**: `PUT /api/project/update`
+- **认证**: 需要登录（求职者）
+
+### 5.4 删除项目经历
+- **URL**: `DELETE /api/project/delete`
+- **认证**: 需要登录（求职者）
+
+---
+
+## 6. 企业信息模块
+
+### 6.1 获取当前企业信息
+- **URL**: `GET /api/company/info`
+- **认证**: 需要登录（HR）
+
+### 6.2 根据ID查询企业信息
+- **URL**: `GET /api/company/{id}`
+- **认证**: 无需登录
+
+### 6.3 更新企业信息
+- **URL**: `PUT /api/company/update`
+- **认证**: 需要登录（HR）
+
+**请求参数**:
+```json
+{
+  "name": "科技有限公司",
+  "legalPerson": "李四",
+  "industry": "互联网",
+  "scale": 3,
+  "financingStage": 4,
+  "description": "一家专注于AI的科技公司",
+  "welfareTags": ["五险一金", "弹性工作", "免费午餐"],
+  "website": "https://example.com",
+  "address": "北京市海淀区"
+}
+```
+
+### 6.4 上传企业Logo
+- **URL**: `POST /api/company/logo`
+- **认证**: 需要登录（HR）
+- **Content-Type**: `multipart/form-data`
+
+### 6.5 上传营业执照
+- **URL**: `POST /api/company/license`
+- **认证**: 需要登录（HR）
+- **Content-Type**: `multipart/form-data`
+
+---
+
+## 7. 职位管理模块
+
+### 7.1 发布职位
+- **URL**: `POST /api/position/add`
+- **认证**: 需要登录（HR）
+
+**请求参数**:
+```json
+{
+  "title": "高级Java工程师",
+  "category": "后端开发",
+  "city": "北京",
+  "salaryMin": 20000,
+  "salaryMax": 40000,
+  "educationRequired": 3,
+  "experienceRequired": 3,
+  "description": "负责后端系统架构设计和开发",
+  "requirements": "3年以上Java开发经验，熟悉Spring Boot",
+  "skills": ["Java", "Spring Boot", "MySQL", "Redis"],
+  "benefits": "五险一金、弹性工作"
+}
+```
+
+### 7.2 更新职位
+- **URL**: `PUT /api/position/update`
+- **认证**: 需要登录（HR）
+
+### 7.3 删除职位
+- **URL**: `DELETE /api/position/delete`
+- **认证**: 需要登录（HR）
+
+### 7.4 查询职位详情
+- **URL**: `GET /api/position/detail`
+- **认证**: 无需登录
+
+**请求参数**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| id | Long | 是 | 职位ID |
+
+### 7.5 Boss查看自己的职位列表
+- **URL**: `GET /api/position/boss/list`
+- **认证**: 需要登录（HR）
+
+### 7.6 求职者搜索职位列表
+- **URL**: `GET /api/position/list`
+- **认证**: 无需登录
+
+**请求参数**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| keyword | String | 否 | 搜索关键词 |
 | city | String | 否 | 城市 |
 | category | String | 否 | 职位类别 |
-| workYearsMin | Integer | 否 | 最低工作年限 |
-| educationMin | Integer | 否 | 最低学历要求 |
-| salaryMin | Integer | 否 | 最低薪资（K） |
-| salaryMax | Integer | 否 | 最高薪资（K） |
-| searchType | String | 否 | 搜索范围（多个值用逗号分隔，可选：title,description,requirement） |
-| pageNum | Integer | 否 | 页码（默认1） |
-| pageSize | Integer | 否 | 每页数量（默认10） |
+| educationRequired | Integer | 否 | 最低学历要求 |
+| salaryMin | Integer | 否 | 最低薪资 |
+| experienceRequired | Integer | 否 | 最低经验要求 |
+| page | Integer | 否 | 页码（默认1） |
+| size | Integer | 否 | 每页数量（默认10） |
 
-### 4.2 职位详情
+### 7.7 关闭职位
+- **URL**: `PUT /api/position/close`
+- **认证**: 需要登录（HR）
 
-- **接口描述**: 获取指定职位的详细信息
-- **请求方式**: GET
-- **请求路径**: `/api/position/detail`
-- **认证要求**: 公开接口
+### 7.8 开启职位
+- **URL**: `PUT /api/position/open`
+- **认证**: 需要登录（HR）
+
+### 7.9 查看公司下的职位
+- **URL**: `GET /api/position/company`
+- **认证**: 无需登录
 
 **请求参数**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| companyId | Long | 是 | 公司ID |
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
+### 7.10 职位对应的公司信息
+- **URL**: `GET /api/position/company-info`
+- **认证**: 无需登录
+
+**请求参数**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| positionId | Long | 是 | 职位ID |
+
+### 7.11 最新职位列表
+- **URL**: `GET /api/position/latest`
+- **认证**: 无需登录
+
+### 7.12 热门职位列表
+- **URL**: `GET /api/position/hot`
+- **认证**: 无需登录
+
+### 7.13 职位详情（含公司信息）
+- **URL**: `GET /api/position/detail-with-company`
+- **认证**: 无需登录
+
+**请求参数**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
 | id | Long | 是 | 职位ID |
 
 ---
 
-## 五、智能简历分析
+## 8. 投递管理模块
 
-### 5.1 上传并分析简历
-
-- **接口描述**: 上传简历文件并获取AI分析结果
-- **请求方式**: POST
-- **请求路径**: `/api/resume/upload-and-analyze`
-- **认证要求**: 需要登录认证
-- **Content-Type**: multipart/form-data
+### 8.1 投递简历
+- **URL**: `POST /api/application/apply`
+- **认证**: 需要登录（求职者）
 
 **请求参数**:
-
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| file | File | 是 | 简历文件（支持PDF、Word、图片） |
-
-**成功响应**:
 ```json
 {
-  "code": 1000,
-  "message": "分析成功",
-  "data": {
-    "overallScore": 85,
-    "highlights": "1. 技术栈丰富... 2. 项目经验充足...",
-    "improvements": "1. 建议补充大数据相关技能... 2. 可以增加架构设计经验...",
-    "skillAssessment": {
-      "strongSkills": ["Java", "Spring Boot", "MySQL"],
-      "recommendedSkills": ["Redis", "Kafka", "Spring Cloud"]
-    }
-  }
+  "positionId": 1
 }
 ```
 
-### 5.2 分析已有简历
+> 同一职位不可重复投递。投递时系统会异步计算AI匹配评分。
 
-- **接口描述**: 分析用户已上传的简历
-- **请求方式**: POST
-- **请求路径**: `/api/resume/analyze`
-- **认证要求**: 需要登录认证
+### 8.2 Boss查看收到的投递列表
+- **URL**: `GET /api/application/boss/list`
+- **认证**: 需要登录（HR）
 
-**成功响应**: 同5.1上传并分析简历
+**请求参数**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| status | Integer | 否 | 投递状态筛选 |
+| page | Integer | 否 | 页码 |
+| size | Integer | 否 | 每页数量 |
+
+### 8.3 求职者查看投递记录
+- **URL**: `GET /api/application/seeker/list`
+- **认证**: 需要登录（求职者）
+
+### 8.4 查看投递详情
+- **URL**: `GET /api/application/detail`
+- **认证**: 需要登录
+
+**请求参数**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| id | Long | 是 | 投递ID |
+
+### 8.5 查看投递对应的职位信息
+- **URL**: `GET /api/application/position`
+- **认证**: 需要登录
+
+### 8.6 查看投递对应的公司信息
+- **URL**: `GET /api/application/company`
+- **认证**: 需要登录
+
+### 8.7 Boss查看求职者简要信息
+- **URL**: `GET /api/application/job-seeker/simple`
+- **认证**: 需要登录（HR）
+
+**请求参数**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| jobSeekerId | Long | 是 | 求职者ID |
+
+### 8.8 Boss查看求职者完整在线简历
+- **URL**: `GET /api/application/job-seeker/resume`
+- **认证**: 需要登录（HR）
+
+**请求参数**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| jobSeekerId | Long | 是 | 求职者ID |
+
+### 8.9 标记简历已查看
+- **URL**: `PUT /api/application/read`
+- **认证**: 需要登录（HR）
+
+**请求参数**:
+```json
+{
+  "id": 1
+}
+```
+
+### 8.10 更新投递状态
+- **URL**: `PUT /api/application/status`
+- **认证**: 需要登录（HR）
+
+**请求参数**:
+```json
+{
+  "id": 1,
+  "status": 3
+}
+```
+
+**投递状态流转**:
+| status | 说明 |
+|--------|------|
+| 1 | 待查看 |
+| 2 | 已查看 |
+| 3 | 面试中 |
+| 4 | 不合适 |
+| 5 | 录用 |
 
 ---
 
-## 六、智能简历填充
+## 9. 通知模块
 
-### 6.1 智能填充简历信息
-
-- **接口描述**: 上传简历文件，通过AI分析并自动填充个人信息
-- **请求方式**: POST
-- **请求路径**: `/api/resume/smart-fill`
-- **认证要求**: 需要登录认证
-- **Content-Type**: multipart/form-data
+### 9.1 获取通知列表
+- **URL**: `GET /api/notification/list`
+- **认证**: 需要登录
 
 **请求参数**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| page | Integer | 否 | 页码 |
+| size | Integer | 否 | 每页数量 |
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| file | File | 是 | 简历文件（支持PDF、Word格式） |
+### 9.2 获取未读通知数量
+- **URL**: `GET /api/notification/unread-count`
+- **认证**: 需要登录
 
-**成功响应**:
+### 9.3 标记通知已读
+- **URL**: `PUT /api/notification/read`
+- **认证**: 需要登录
+
+**请求参数**:
 ```json
 {
-  "code": 1000,
+  "id": 1
+}
+```
+
+### 9.4 标记所有通知已读
+- **URL**: `PUT /api/notification/read-all`
+- **认证**: 需要登录
+
+---
+
+## 10. 收藏模块
+
+### 10.1 添加收藏
+- **URL**: `POST /api/favorite/add`
+- **认证**: 需要登录
+
+**请求参数**:
+```json
+{
+  "targetId": 1,
+  "targetType": 1
+}
+```
+
+| targetType | 说明 |
+|------------|------|
+| 1 | 职位 |
+| 2 | 公司 |
+| 3 | 求职者 |
+
+### 10.2 取消收藏
+- **URL**: `DELETE /api/favorite/remove`
+- **认证**: 需要登录
+
+**请求参数**:
+```json
+{
+  "targetId": 1,
+  "targetType": 1
+}
+```
+
+### 10.3 获取收藏列表
+- **URL**: `GET /api/favorite/list`
+- **认证**: 需要登录
+
+**请求参数**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| targetType | Integer | 否 | 收藏类型筛选 |
+| page | Integer | 否 | 页码 |
+| size | Integer | 否 | 每页数量 |
+
+### 10.4 检查是否已收藏
+- **URL**: `GET /api/favorite/check`
+- **认证**: 需要登录
+
+**请求参数**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| targetId | Long | 是 | 目标ID |
+| targetType | Integer | 是 | 目标类型 |
+
+---
+
+## 11. 面试模块
+
+### 11.1 创建面试邀请
+- **URL**: `POST /api/interview/create`
+- **认证**: 需要登录（HR）
+
+**请求参数**:
+```json
+{
+  "applicationId": 1,
+  "interviewType": 1,
+  "interviewTime": "2026-05-01 14:00",
+  "address": "北京市海淀区xx大厦",
+  "onlineLink": "",
+  "notes": "请携带身份证"
+}
+```
+
+| interviewType | 说明 |
+|---------------|------|
+| 1 | 线下面试 |
+| 2 | 线上面试 |
+| 3 | AI面试 |
+
+### 11.2 更新面试状态
+- **URL**: `PUT /api/interview/{id}/status`
+- **认证**: 需要登录
+
+**请求参数**:
+```json
+{
+  "status": 2
+}
+```
+
+### 11.3 企业面试列表
+- **URL**: `GET /api/interview/company/list`
+- **认证**: 需要登录（HR）
+
+### 11.4 求职者面试列表
+- **URL**: `GET /api/interview/job-seeker/list`
+- **认证**: 需要登录（求职者）
+
+### 11.5 面试详情
+- **URL**: `GET /api/interview/{id}`
+- **认证**: 需要登录
+
+### 11.6 删除面试
+- **URL**: `DELETE /api/interview/{id}`
+- **认证**: 需要登录（HR）
+
+### 11.7 提交模拟面试
+- **URL**: `POST /api/interview/mock`
+- **认证**: 需要登录（求职者）
+- **Content-Type**: `multipart/form-data`
+
+**请求参数**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| positionTitle | String | 是 | 面试岗位名称 |
+| video | File | 是 | 面试视频文件 |
+
+### 11.8 生成模拟面试题
+- **URL**: `GET /api/interview/mock/questions`
+- **认证**: 需要登录（求职者）
+
+**请求参数**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| positionTitle | String | 是 | 岗位名称 |
+
+### 11.9 结束AI面试
+- **URL**: `POST /api/interview/finish`
+- **认证**: 需要登录（求职者）
+- **Content-Type**: `multipart/form-data`
+
+**请求参数**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| interviewId | Long | 是 | 面试ID |
+| video | File | 是 | 面试视频文件 |
+
+> AI面试评估为异步处理，提交后需轮询检查评估结果。
+
+### 11.10 获取面试评估结果
+- **URL**: `GET /api/interview/evaluation/{interviewId}`
+- **认证**: 需要登录
+
+**响应示例**:
+```json
+{
+  "code": 200,
   "message": "操作成功",
   "data": {
-    "success": true,
-    "errorMessage": null,
+    "id": 1,
+    "interviewId": 1,
+    "overallScore": 85,
+    "languageScore": 80,
+    "logicScore": 90,
+    "professionalScore": 85,
+    "evaluation": "面试表现良好，逻辑清晰...",
+    "suggestions": "建议加强算法能力..."
+  },
+  "timestamp": 1714032000000
+}
+```
+
+### 11.11 检查评估结果是否存在
+- **URL**: `GET /api/interview/evaluation/{interviewId}/exists`
+- **认证**: 需要登录
+
+---
+
+## 12. AI智能分析模块
+
+### 12.1 分析简历（文本输入）
+- **URL**: `POST /api/resume/analyze`
+- **认证**: 需要登录（求职者）
+
+**请求参数**:
+```json
+{
+  "resumeText": "张三，3年Java开发经验..."
+}
+```
+
+### 12.2 上传并分析简历
+- **URL**: `POST /api/resume/upload-and-analyze`
+- **认证**: 需要登录（求职者）
+- **Content-Type**: `multipart/form-data`
+
+**请求参数**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| file | File | 是 | 简历文件（支持pdf/doc/docx） |
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
     "name": "张三",
-    "gender": 1,
-    "age": 28,
     "phone": "13800138000",
     "email": "zhangsan@example.com",
-    "city": "北京市",
-    "address": "朝阳区",
-    "workYears": 5,
-    "currentSalary": 20.00,
-    "expectedSalary": 30.00,
-    "currentStatus": 1,
-    "skills": ["Java", "Spring Boot", "MySQL", "Vue.js"],
-    "introduction": "具有多年互联网开发经验...",
-    "unfilledFields": ["年龄"],
-    "confidence": 0.85
-  }
-}
-```
-
-**响应字段说明**:
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| success | Boolean | 是否成功 |
-| errorMessage | String | 错误信息（失败时返回） |
-| name | String | 姓名 |
-| gender | Integer | 性别：1-男，2-女 |
-| age | Integer | 年龄 |
-| phone | String | 手机号 |
-| email | String | 邮箱 |
-| city | String | 所在城市 |
-| address | String | 详细地址 |
-| workYears | Integer | 工作年限 |
-| currentSalary | BigDecimal | 当前薪资（K/月） |
-| expectedSalary | BigDecimal | 期望薪资（K/月） |
-| currentStatus | Integer | 当前状态：1-在职，2-离职，3-在读学生 |
-| skills | List<String> | 技能标签列表 |
-| introduction | String | 个人简介 |
-| unfilledFields | List<String> | 未填充的字段列表 |
-| confidence | Double | 解析置信度（0-1） |
-
----
-
-## 七、岗位画像管理
-
-### 7.1 生成岗位画像
-
-- **接口描述**: 根据岗位信息生成AI画像
-- **请求方式**: POST
-- **请求路径**: `/api/job-profile/generate/{positionId}`
-- **认证要求**: 需要登录认证
-
-**路径参数**:
-
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| positionId | Long | 是 | 岗位ID |
-
-**成功响应**:
-```json
-{
-  "code": 1000,
-  "message": "操作成功",
-  "data": {
-    "id": 1,
-    "positionId": 1,
-    "jobName": "Java开发工程师",
-    "companyName": "某科技有限公司",
-    "skills": ["Java", "Spring Boot", "MySQL"],
-    "educationRequire": "本科",
-    "educationLevel": 3,
-    "experienceRequire": "3-5年",
-    "experienceLevel": 4,
-    "salaryRange": "15-30K/月",
-    "salaryMin": 15.00,
-    "salaryMax": 30.00,
-    "jobTags": ["互联网", "技术开发"],
-    "descriptionSummary": "负责公司核心业务系统开发...",
-    "responsibilitiesSummary": "1. 参与系统架构设计...",
-    "requirementsSummary": "1. 计算机相关专业本科以上学历...",
-    "companyBenefits": "五险一金、带薪年假...",
-    "matchKeywords": ["Java", "Spring", "后端开发"],
-    "createdAt": "2026-04-18T10:00:00"
-  }
-}
-```
-
-### 7.2 获取岗位画像
-
-- **接口描述**: 获取指定岗位的AI画像
-- **请求方式**: GET
-- **请求路径**: `/api/job-profile/{positionId}`
-- **认证要求**: 需要登录认证
-
-**路径参数**:
-
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| positionId | Long | 是 | 岗位ID |
-
-**成功响应**: 同7.1生成岗位画像成功响应
-
-### 7.3 更新岗位画像
-
-- **接口描述**: 重新生成指定岗位的AI画像
-- **请求方式**: PUT
-- **请求路径**: `/api/job-profile/update/{positionId}`
-- **认证要求**: 需要登录认证
-
-**路径参数**:
-
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| positionId | Long | 是 | 岗位ID |
-
-**成功响应**: 同7.1生成岗位画像成功响应
-
-### 7.4 删除岗位画像
-
-- **接口描述**: 删除指定岗位的AI画像
-- **请求方式**: DELETE
-- **请求路径**: `/api/job-profile/{positionId}`
-- **认证要求**: 需要登录认证
-
-**路径参数**:
-
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| positionId | Long | 是 | 岗位ID |
-
-**成功响应**:
-```json
-{
-  "code": 1000,
-  "message": "操作成功",
-  "data": true
-}
-```
-
----
-
-## 八、人才画像管理
-
-### 8.1 生成人才画像
-
-- **接口描述**: 根据当前用户信息生成AI画像
-- **请求方式**: POST
-- **请求路径**: `/api/talent-profile/generate`
-- **认证要求**: 需要登录认证（求职者）
-
-**成功响应**:
-```json
-{
-  "code": 1000,
-  "message": "操作成功",
-  "data": {
-    "id": 1,
-    "userId": 2,
-    "userName": "张三",
-    "skills": ["Java", "Spring Boot", "Vue.js"],
     "education": "本科",
-    "educationLevel": 3,
-    "workYears": 3,
-    "salaryExpectation": 25.00,
-    "currentSalary": 18.00,
-    "talentTags": ["技术达人", "全栈开发"],
-    "descriptionSummary": "具有多年互联网开发经验...",
-    "strengthsSummary": "熟悉Java技术栈...",
-    "careerGoals": "寻求高级Java开发工程师岗位...",
-    "matchKeywords": ["Java", "后端开发", "全栈"],
-    "aiEvaluation": "具备扎实的Java开发能力...",
-    "createdAt": "2026-04-18T10:00:00"
-  }
+    "skills": ["Java", "Spring Boot", "MySQL"],
+    "workExperience": [...],
+    "educationExperience": [...],
+    "projectExperience": [...]
+  },
+  "timestamp": 1714032000000
 }
 ```
 
-### 8.2 获取人才画像
-
-- **接口描述**: 获取当前用户的人才画像
-- **请求方式**: GET
-- **请求路径**: `/api/talent-profile`
-- **认证要求**: 需要登录认证（求职者）
-
-**成功响应**: 同8.1生成人才画像成功响应
-
-### 8.3 更新人才画像
-
-- **接口描述**: 重新生成当前用户的人才画像
-- **请求方式**: PUT
-- **请求路径**: `/api/talent-profile/update`
-- **认证要求**: 需要登录认证（求职者）
-
-**成功响应**: 同8.1生成人才画像成功响应
-
-### 8.4 删除人才画像
-
-- **接口描述**: 删除当前用户的人才画像
-- **请求方式**: DELETE
-- **请求路径**: `/api/talent-profile`
-- **认证要求**: 需要登录认证（求职者）
-
-**成功响应**:
-```json
-{
-  "code": 1000,
-  "message": "操作成功",
-  "data": true
-}
-```
-
----
-
-## 九、岗位推荐
-
-### 9.1 获取岗位推荐列表
-
-- **接口描述**: 根据用户画像推荐匹配的岗位
-- **请求方式**: GET
-- **请求路径**: `/api/job-recommend`
-- **认证要求**: 需要登录认证（求职者）
+### 12.3 智能填充简历
+- **URL**: `POST /api/resume/smart-fill`
+- **认证**: 需要登录（求职者）
+- **Content-Type**: `multipart/form-data`
 
 **请求参数**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| file | File | 是 | 简历文件 |
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| limit | Integer | 否 | 推荐数量限制，默认10 |
+> AI解析简历后自动填充求职者表单，返回结构化的简历数据。
 
-**成功响应**:
+---
+
+## 13. 岗位画像模块
+
+### 13.1 AI生成岗位画像
+- **URL**: `POST /api/job-profile/generate/{positionId}`
+- **认证**: 需要登录（HR）
+
+**响应示例**:
 ```json
 {
-  "code": 1000,
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "positionId": 1,
+    "coreSkills": ["Java", "Spring Boot", "MySQL"],
+    "educationRequirement": "本科及以上",
+    "experienceRequirement": "3年以上",
+    "skillTags": [
+      {"name": "Java", "level": "核心", "weight": 5},
+      {"name": "Spring Boot", "level": "核心", "weight": 4}
+    ],
+    "matchKeywords": ["后端开发", "微服务", "分布式"],
+    "salaryRange": "20K-40K",
+    "aiSummary": "该岗位需要扎实的Java基础..."
+  },
+  "timestamp": 1714032000000
+}
+```
+
+### 13.2 获取岗位画像
+- **URL**: `GET /api/job-profile/{positionId}`
+- **认证**: 需要登录
+
+### 13.3 更新岗位画像
+- **URL**: `PUT /api/job-profile/update/{positionId}`
+- **认证**: 需要登录（HR）
+
+### 13.4 删除岗位画像
+- **URL**: `DELETE /api/job-profile/{positionId}`
+- **认证**: 需要登录（HR）
+
+---
+
+## 14. 人才画像模块
+
+### 14.1 AI生成人才画像
+- **URL**: `POST /api/talent-profile/generate`
+- **认证**: 需要登录（求职者）
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "userId": 1,
+    "skillEvaluation": "Java开发能力突出，熟悉主流框架",
+    "advantages": ["扎实的Java基础", "丰富的项目经验"],
+    "careerGoal": "高级Java工程师/架构师",
+    "skillTags": [
+      {"name": "Java", "level": "精通", "weight": 5},
+      {"name": "Spring Boot", "level": "熟练", "weight": 4}
+    ],
+    "aiSummary": "该求职者具有3年Java开发经验..."
+  },
+  "timestamp": 1714032000000
+}
+```
+
+### 14.2 获取人才画像
+- **URL**: `GET /api/talent-profile`
+- **认证**: 需要登录（求职者）
+
+### 14.3 更新人才画像
+- **URL**: `PUT /api/talent-profile/update`
+- **认证**: 需要登录（求职者）
+
+### 14.4 删除人才画像
+- **URL**: `DELETE /api/talent-profile`
+- **认证**: 需要登录（求职者）
+
+---
+
+## 15. 岗位推荐模块
+
+### 15.1 获取岗位推荐列表
+- **URL**: `GET /api/job-recommend`
+- **认证**: 需要登录（求职者）
+
+**请求参数**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| page | Integer | 否 | 页码 |
+| size | Integer | 否 | 每页数量 |
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "records": [
+      {
+        "recordId": 1,
+        "positionId": 1,
+        "positionTitle": "高级Java工程师",
+        "companyName": "字节跳动",
+        "matchScore": 92.5,
+        "skillMatchRate": 90.0,
+        "experienceMatchRate": 80.0,
+        "educationMatchRate": 100.0,
+        "salaryMatchRate": 75.0,
+        "matchDetails": {
+          "matchedSkills": ["Java", "Spring Boot"],
+          "missingSkills": ["Redis"],
+          "matchDescription": "技能匹配度较高，经验要求满足"
+        }
+      }
+    ],
+    "total": 50,
+    "size": 10,
+    "current": 1
+  },
+  "timestamp": 1714032000000
+}
+```
+
+### 15.2 获取匹配度详情
+- **URL**: `GET /api/job-recommend/match/{positionId}`
+- **认证**: 需要登录（求职者）
+
+### 15.3 批量生成匹配记录
+- **URL**: `POST /api/job-recommend/batch-generate`
+- **认证**: 需要登录（求职者）
+
+> 触发后台为当前求职者与所有招聘中岗位计算匹配度，生成推荐记录。
+
+### 15.4 标记推荐已查看
+- **URL**: `PUT /api/job-recommend/viewed/{recordId}`
+- **认证**: 需要登录（求职者）
+
+---
+
+## 16. 人才推荐模块（牛人发现）
+
+### 16.1 获取人才推荐列表
+- **URL**: `GET /api/talent-recommend`
+- **认证**: 需要登录（HR）
+
+**请求参数**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| positionId | Long | 否 | 岗位ID（不传则使用HR最新的招聘中岗位） |
+| limit | Integer | 否 | 推荐数量（默认10） |
+
+**响应示例**:
+```json
+{
+  "code": 200,
   "message": "操作成功",
   "data": [
     {
+      "jobSeekerId": 1,
+      "userId": 1,
+      "name": "张三",
+      "avatarUrl": "https://oss.example.com/avatar/1.jpg",
+      "workYears": 3,
+      "education": "本科",
+      "skills": "[\"Java\",\"Spring Boot\"]",
+      "salaryExpectation": 20,
+      "currentStatus": "离职-随时到岗",
+      "expectedPosition": "Java高级工程师",
+      "expectedCity": "北京",
+      "selfIntroduction": "3年Java开发经验",
+      "strengthsSummary": "扎实的Java基础，熟悉微服务架构",
+      "matchScore": 88.5,
+      "skillMatchRate": 90.0,
+      "experienceMatchRate": 80.0,
+      "educationMatchRate": 100.0,
+      "salaryMatchRate": 75.0,
       "positionId": 1,
-      "id": 1,
-      "companyId": 1,
-      "jobName": "Java开发工程师",
-      "title": "Java开发工程师",
-      "companyName": "某科技有限公司",
-      "companyLogo": "https://example.com/logo.png",
-      "city": "北京市",
-      "address": "朝阳区",
-      "salaryRange": "15-30K/月",
-      "salaryMin": 15,
-      "salaryMax": 30,
-      "educationRequire": "本科",
-      "educationMin": 3,
-      "experienceRequire": "3-5年",
-      "workYearsMin": 4,
-      "category": "后端开发",
-      "jobTags": ["互联网", "技术开发"],
-      "tags": "["互联网", "技术开发"]",
-      "description": "负责公司核心业务系统开发...",
-      "requirement": "计算机相关专业本科以上学历...",
-      "status": 1,
-      "matchScore": 85.50,
-      "skillMatchRate": 90.00,
-      "experienceMatchRate": 80.00,
-      "educationMatchRate": 100.00,
-      "salaryMatchRate": 75.00,
+      "positionTitle": "高级Java工程师",
       "matchDetails": {
         "matchedSkills": ["Java", "Spring Boot"],
         "missingSkills": ["Redis"],
         "matchDescription": "技能匹配度较高，经验要求满足"
-      },
-      "descriptionSummary": "负责公司核心业务系统开发...",
-      "isFavorite": false,
-      "createdAt": "2026-04-18T10:00:00"
+      }
     }
-  ]
+  ],
+  "timestamp": 1714032000000
 }
 ```
 
-### 9.2 获取匹配度详情
+### 16.2 获取人才匹配详情
+- **URL**: `GET /api/talent-recommend/match`
+- **认证**: 需要登录（HR）
 
-- **接口描述**: 获取指定岗位与当前用户的匹配度详情
-- **请求方式**: GET
-- **请求路径**: `/api/job-recommend/match/{positionId}`
-- **认证要求**: 需要登录认证（求职者）
-
-**路径参数**:
-
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
+**请求参数**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| jobSeekerId | Long | 是 | 求职者用户ID |
 | positionId | Long | 是 | 岗位ID |
 
-**成功响应**: 同9.1获取岗位推荐列表中的单个推荐项详情
+### 16.3 批量生成人才匹配记录
+- **URL**: `POST /api/talent-recommend/batch-generate`
+- **认证**: 需要登录（HR）
 
-### 9.3 批量生成匹配记录
+**请求参数**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| positionId | Long | 是 | 岗位ID |
 
-- **接口描述**: 为当前用户批量生成所有岗位的匹配记录
-- **请求方式**: POST
-- **请求路径**: `/api/job-recommend/batch-generate`
-- **认证要求**: 需要登录认证（求职者）
+> 为当前HR的指定岗位与所有有人才画像的求职者计算匹配度，生成推荐记录。
 
-**成功响应**:
+### 16.4 标记人才推荐已查看
+- **URL**: `PUT /api/talent-recommend/viewed/{recordId}`
+- **认证**: 需要登录（HR）
+
+---
+
+## 17. 数据统计模块
+
+### 17.1 求职者端统计数据
+- **URL**: `GET /api/statistics/seeker`
+- **认证**: 需要登录（求职者）
+
+### 17.2 HR端统计数据
+- **URL**: `GET /api/statistics/boss`
+- **认证**: 需要登录（HR）
+
+### 17.3 词云数据
+- **URL**: `GET /api/statistics/wordcloud`
+- **认证**: 需要登录
+
+---
+
+## 17. 文件上传模块
+
+### 17.1 上传文件
+- **URL**: `POST /api/file/upload`
+- **认证**: 需要登录
+- **Content-Type**: `multipart/form-data`
+
+**请求参数**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| file | File | 是 | 文件 |
+| fileType | String | 否 | 文件类型（avatar/resume/logo/license） |
+
+**响应示例**:
 ```json
 {
-  "code": 1000,
+  "code": 200,
   "message": "操作成功",
-  "data": 50
-}
-```
-
-**响应说明**:
-- data表示生成的匹配记录数量
-
-### 9.4 标记匹配记录为已查看
-
-- **接口描述**: 标记指定匹配记录为已查看状态
-- **请求方式**: PUT
-- **请求路径**: `/api/job-recommend/viewed/{recordId}`
-- **认证要求**: 需要登录认证
-
-**路径参数**:
-
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| recordId | Long | 是 | 匹配记录ID |
-
-**成功响应**:
-```json
-{
-  "code": 1000,
-  "message": "操作成功",
-  "data": true
-}
-```
-
----
-
-## 十、数据统计
-
-### 10.1 获取求职者端统计数据
-
-- **接口描述**: 获取就业市场统计数据，帮助求职者了解行情
-- **请求方式**: GET
-- **请求路径**: `/api/statistics/seeker`
-- **认证要求**: 需要登录认证（求职者）
-
-**成功响应**:
-```json
-{
-  "code": 1000,
-  "message": "获取成功",
   "data": {
-    "totalPositions": 156,
-    "todayNewPositions": 12,
-    "myApplications": 5,
-    "myInterviews": 2,
-    "hotCities": [
-      { "city": "北京", "count": 45, "percentage": 28.85 },
-      { "city": "上海", "count": 38, "percentage": 24.36 },
-      { "city": "深圳", "count": 25, "percentage": 16.03 },
-      { "city": "广州", "count": 20, "percentage": 12.82 },
-      { "city": "杭州", "count": 18, "percentage": 11.54 }
-    ],
-    "hotCategories": [
-      { "category": "技术", "count": 65, "percentage": 41.67 },
-      { "category": "产品", "count": 28, "percentage": 17.95 },
-      { "category": "运营", "count": 22, "percentage": 14.10 },
-      { "category": "设计", "count": 18, "percentage": 11.54 },
-      { "category": "市场", "count": 15, "percentage": 9.62 }
-    ],
-    "highSalaryPercentage": 35.50,
-    "competitionIndex": 3.25
-  }
+    "url": "https://ai-recruitment.oss-cn-chengdu.aliyuncs.com/avatar/1.jpg",
+    "fileName": "1.jpg"
+  },
+  "timestamp": 1714032000000
 }
 ```
 
-**响应字段说明**:
+### 17.2 批量上传文件
+- **URL**: `POST /api/file/upload-batch`
+- **认证**: 需要登录
+- **Content-Type**: `multipart/form-data`
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| totalPositions | Long | 总职位数（招聘中） |
-| todayNewPositions | Long | 今日新增职位数 |
-| myApplications | Long | 我的投递数 |
-| myInterviews | Long | 我的面试邀请数 |
-| hotCities | List | 热门城市TOP5分布 |
-| hotCategories | List | 热门职位类别TOP5分布 |
-| highSalaryPercentage | BigDecimal | 高薪职位占比（薪资>=20K） |
-| competitionIndex | BigDecimal | 求职竞争指数（平均投递数/职位数） |
+### 17.3 删除文件
+- **URL**: `DELETE /api/file/delete`
+- **认证**: 需要登录
 
-### 10.2 获取HR端统计数据
-
-- **接口描述**: 获取招聘效果统计数据，帮助HR了解招聘情况
-- **请求方式**: GET
-- **请求路径**: `/api/statistics/boss`
-- **认证要求**: 需要登录认证（企业HR）
-
-**成功响应**:
+**请求参数**:
 ```json
 {
-  "code": 1000,
-  "message": "获取成功",
-  "data": {
-    "myPositions": 8,
-    "myApplications": 45,
-    "pendingApplications": 12,
-    "interviewingCount": 8,
-    "hiredCount": 3,
-    "rejectedCount": 22,
-    "conversionRate": 6.67,
-    "positionStats": [
-      {
-        "positionId": 1,
-        "positionTitle": "Java开发工程师",
-        "applicationCount": 15,
-        "conversionRate": 5.86
-      },
-      {
-        "positionId": 2,
-        "positionTitle": "前端开发工程师",
-        "applicationCount": 12,
-        "conversionRate": 6.06
-      }
-    ]
-  }
+  "url": "https://ai-recruitment.oss-cn-chengdu.aliyuncs.com/avatar/1.jpg"
 }
 ```
 
-**响应字段说明**:
+---
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| myPositions | Long | 我发布的职位数 |
-| myApplications | Long | 收到投递总数 |
-| pendingApplications | Long | 待处理投递数 |
-| interviewingCount | Long | 面试中数 |
-| hiredCount | Long | 已录用数 |
-| rejectedCount | Long | 不合适数 |
-| conversionRate | BigDecimal | 整体转化率（录用/投递） |
-| positionStats | List | 各职位投递情况（positionId-职位ID，positionTitle-职位名称，applicationCount-投递数，conversionRate-转化率） |
+## 匹配度计算说明
+
+### 综合匹配分数公式
+```
+MatchScore = 技能匹配率 × 0.5 + 经验匹配率 × 0.3 + 学历匹配率 × 0.1 + 薪资匹配率 × 0.1
+```
+
+### 各维度计算方法
+| 维度 | 权重 | 计算方法 |
+|------|------|----------|
+| 技能匹配 | 50% | 匹配技能数 / 岗位要求技能数 × 100% |
+| 经验匹配 | 30% | 根据工作年限对比计算 |
+| 学历匹配 | 10% | 根据学历等级对比计算 |
+| 薪资匹配 | 10% | 期望薪资是否在岗位薪资范围内 |
 
 ---
 
-## 十一、错误码说明
+## 数据字典
 
-### 系统级错误码
+### 性别 (Gender)
+| 值 | 说明 |
+|----|------|
+| 0 | 未知 |
+| 1 | 男 |
+| 2 | 女 |
 
-| 错误码 | 说明 |
-|--------|------|
-| 1000 | 操作成功 |
-| 1001 | 系统异常 |
-| 1002 | 操作失败 |
-| 2000 | 业务异常 |
-| 2001 | 参数错误 |
-| 2002 | 权限不足 |
-| 2003 | 资源不存在 |
-| 2004 | 身份冲突 |
-| 2005 | 验证码错误 |
-| 2006 | 验证码已过期 |
-| 2007 | 文件上传失败 |
-| 2008 | 文件类型不支持 |
-| 2009 | 文件大小超限 |
-
-### 业务级错误码
-
-| 错误码 | 说明 |
-|--------|------|
-| 3001 | 用户不存在 |
-| 3002 | 求职者信息不存在 |
-| 3003 | 企业信息不存在 |
-| 3004 | 岗位不存在 |
-| 3005 | 投递记录不存在 |
-| 3006 | 收藏记录不存在 |
-| 3007 | 简历不存在 |
-| 3008 | 教育经历不存在 |
-| 3009 | 工作经历不存在 |
-| 3010 | 项目经历不存在 |
-| 3011 | 面试记录不存在 |
-| 3012 | 岗位画像不存在 |
-| 3013 | 人才画像不存在 |
-
----
-
-## 十二、数据字典
-
-### 学历等级
-
-| 等级 | 说明 |
-|------|------|
+### 学历 (EducationLevel)
+| 值 | 说明 |
+|----|------|
 | 1 | 高中及以下 |
 | 2 | 大专 |
 | 3 | 本科 |
 | 4 | 硕士 |
 | 5 | 博士 |
 
-### 经验等级
-
-| 等级 | 说明 |
-|------|------|
-| 1 | 不限 |
-| 2 | 1年以下 |
-| 3 | 1-3年 |
-| 4 | 3-5年 |
-| 5 | 5-10年 |
-| 6 | 10年以上 |
-
-### 当前状态
-
+### 当前状态 (CurrentStatus)
 | 值 | 说明 |
-|-----|------|
-| 1 | 在职 |
-| 2 | 离职 |
-| 3 | 在读学生 |
+|----|------|
+| 1 | 在职-暂不考虑 |
+| 2 | 离职-随时到岗 |
+| 3 | 在职-考虑机会 |
 
-### 性别
-
+### 企业规模 (CompanyScale)
 | 值 | 说明 |
-|-----|------|
-| 1 | 男 |
-| 2 | 女 |
+|----|------|
+| 1 | 0-20人 |
+| 2 | 20-99人 |
+| 3 | 100-499人 |
+| 4 | 500-999人 |
+| 5 | 1000-9999人 |
+| 6 | 10000人以上 |
 
-### 熟练度等级
-
-| 等级 | 说明 |
-|------|------|
-| 1 | 了解 |
-| 2 | 熟悉 |
-| 3 | 掌握 |
-| 4 | 精通 |
-| 5 | 专家 |
-
-### 技能等级
-
+### 融资阶段 (FinancingStage)
 | 值 | 说明 |
-|-----|------|
-| required | 必须 |
-| preferred | 优先 |
+|----|------|
+| 1 | 未融资 |
+| 2 | 天使轮 |
+| 3 | A轮 |
+| 4 | B轮 |
+| 5 | C轮 |
+| 6 | 已上市 |
+| 7 | 不需要融资 |
 
----
+### 投递状态 (ApplicationStatus)
+| 值 | 说明 |
+|----|------|
+| 1 | 待查看 |
+| 2 | 已查看 |
+| 3 | 面试中 |
+| 4 | 不合适 |
+| 5 | 录用 |
 
-## 十三、注意事项
+### 通知类型 (NotificationType)
+| 值 | 说明 |
+|----|------|
+| 1 | 新投递提醒 |
+| 2 | 面试状态变更 |
+| 3 | 系统公告 |
 
-1. **验证码有效期**：验证码有效期为5分钟，超过时间需要重新获取
-2. **JWT令牌**：需要认证的接口需要在请求头中携带 `Authorization: Bearer <token>`
-3. **文件上传**：上传文件前需要先调用文件上传接口获取URL，然后将URL传给对应的业务接口
-4. **自动创建**：首次登录时，系统会自动创建用户和相关业务信息（如job_seeker或company记录）
-5. **查看自己简历**：登录后查看自己的简历，调用 `/api/job-seeker/info` 接口即可获取完整信息（包含基本信息、教育经历、工作经历、项目经历）
-6. **Boss查看候选人**：Boss通过投递记录查看候选人的简历信息，使用 `/api/application/job-seeker/resume?id=1` 接口
-7. **AI画像生成**：首次访问岗位画像或人才画像时，系统会自动生成画像
-8. **智能推荐**：推荐系统基于人才画像和岗位画像的匹配度计算，推荐最合适的岗位
+### 面试类型 (InterviewType)
+| 值 | 说明 |
+|----|------|
+| 1 | 线下面试 |
+| 2 | 线上面试 |
+| 3 | AI面试 |
 
----
-
-## 十四、匹配度计算说明
-
-### 匹配分数计算
-
-综合匹配分数 = 技能匹配率 × 0.5 + 经验匹配率 × 0.3 + 学历匹配率 × 0.1 + 薪资匹配率 × 0.1
-
-### 各项匹配率计算
-
-1. **技能匹配率**：求职者技能与岗位要求技能的匹配比例
-2. **经验匹配率**：根据求职者工作年限与岗位要求经验对比计算
-3. **学历匹配率**：根据求职者学历与岗位要求学历对比计算
-4. **薪资匹配率**：根据求职者期望薪资与岗位薪资范围对比计算
-
-### 匹配等级划分
-
-| 匹配分数 | 等级 | 说明 |
-|----------|------|------|
-| 80-100 | 高 | 高度匹配，推荐优先 |
-| 60-79 | 中 | 中度匹配，可以尝试 |
-| 0-59 | 低 | 低度匹配，需要考虑 |
+### 收藏类型 (FavoriteType)
+| 值 | 说明 |
+|----|------|
+| 1 | 职位 |
+| 2 | 公司 |
+| 3 | 求职者 |

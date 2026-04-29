@@ -98,12 +98,12 @@ public class ApplicationServiceImpl implements ApplicationService {
         }, aiScoreExecutor);
 
         // 发送通知给Boss
-        String content = String.format("您收到了来自 %s 对 %s 的新投递",
+        String content = String.format("您收到了来自 %s 对【%s】的新投递",
                 jobSeeker.getName() != null ? jobSeeker.getName() : "求职者",
                 position.getTitle());
         notificationService.sendNotification(
                 position.getBossId(),
-                1, // 新投递提醒
+                1,
                 "新投递提醒",
                 content,
                 application.getId()
@@ -177,15 +177,19 @@ public class ApplicationServiceImpl implements ApplicationService {
         // 发送状态变更通知给求职者
         String[] statusNames = {"", "待查看", "已查看", "面试中", "不合适", "录用"};
         String title = "投递状态更新";
-        String content = String.format("您投递的职位状态已更新为：%s",
+        String content = String.format("您投递的【%s】职位状态已更新为：%s",
+                application.getPositionTitle() != null ? application.getPositionTitle() : "职位",
                 status >= 1 && status <= 5 ? statusNames[status] : "未知状态");
-        notificationService.sendNotification(
-                application.getJobSeekerId(),
-                2, // 面试状态变更
-                title,
-                content,
-                applicationId
-        );
+        JobSeeker jobSeeker = jobSeekerMapper.selectById(application.getJobSeekerId());
+        if (jobSeeker != null) {
+            notificationService.sendNotification(
+                    jobSeeker.getUserId(),
+                    2,
+                    title,
+                    content,
+                    applicationId
+            );
+        }
 
         log.info("更新投递状态成功，applicationId：{}，status：{}", applicationId, status);
     }

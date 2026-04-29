@@ -1,4 +1,4 @@
-package com.example.airecruitmentbackend.util;
+package com.example.airecruitmentbackend.utils;
 
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;

@@ -2,7 +2,7 @@ package com.example.airecruitmentbackend.filter;
 
 import com.example.airecruitmentbackend.entity.User;
 import com.example.airecruitmentbackend.mapper.UserMapper;
-import com.example.airecruitmentbackend.util.JwtUtil;
+import com.example.airecruitmentbackend.utils.JwtUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
@@ -48,6 +48,13 @@ public class JwtAuthenticationFilter implements Filter {
             "/api/position/detail-with-company"
     );
 
+    /**
+     * 不需要JWT过滤的路径前缀
+     */
+    private static final List<String> EXCLUDE_PREFIXES = Arrays.asList(
+            "/ws/"
+    );
+
     @Override
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain chain)
             throws IOException, ServletException {
@@ -73,6 +80,14 @@ public class JwtAuthenticationFilter implements Filter {
         if ("OPTIONS".equalsIgnoreCase(method)) {
             log.debug("【JwtFilter】OPTIONS请求，直接放行");
             return;
+        }
+
+        // 放行 WebSocket 路径（不阻塞握手请求）
+        for (String prefix : EXCLUDE_PREFIXES) {
+            if (uri.startsWith(prefix)) {
+                chain.doFilter(request, response);
+                return;
+            }
         }
 
         // 检查白名单

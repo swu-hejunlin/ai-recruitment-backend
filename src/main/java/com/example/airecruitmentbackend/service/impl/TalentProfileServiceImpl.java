@@ -7,6 +7,7 @@ import com.example.airecruitmentbackend.dto.TalentProfileResponse;
 import com.example.airecruitmentbackend.entity.*;
 import com.example.airecruitmentbackend.mapper.*;
 import com.example.airecruitmentbackend.service.TalentProfileService;
+import com.example.airecruitmentbackend.service.ProfileVectorService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import ai.z.openapi.ZhipuAiClient;
 import ai.z.openapi.service.model.*;
@@ -45,6 +46,9 @@ public class TalentProfileServiceImpl extends ServiceImpl<TalentProfileMapper, T
     @Autowired
     @Qualifier("asyncExecutor")
     private ExecutorService asyncExecutor;
+
+    @Autowired
+    private ProfileVectorService profileVectorService;
 
     @Override
     @Transactional
@@ -103,6 +107,18 @@ public class TalentProfileServiceImpl extends ServiceImpl<TalentProfileMapper, T
         log.info("更新用户画像生成标记成功");
 
         saveTalentSkillTags(userId, extractDTO.getSkills());
+
+        try {
+            log.info("开始生成人才Embedding向量...");
+            boolean vectorResult = profileVectorService.generateTalentProfileVector(talentProfile);
+            if (vectorResult) {
+                log.info("人才Embedding向量生成成功");
+            } else {
+                log.warn("人才Embedding向量生成失败");
+            }
+        } catch (Exception e) {
+            log.error("生成人才Embedding向量异常: {}", e.getMessage());
+        }
 
         TalentProfileResponse response = buildTalentProfileResponse(talentProfile, user);
         log.info("人才画像生成流程完成，返回响应数据");

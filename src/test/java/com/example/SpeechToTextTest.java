@@ -1,6 +1,6 @@
 package com.example;
 
-import com.example.airecruitmentbackend.util.SpeechToTextUtil;
+import com.example.airecruitmentbackend.utils.SpeechToTextUtil;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.CompletableFuture;

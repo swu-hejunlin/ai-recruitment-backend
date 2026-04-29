@@ -3,7 +3,7 @@ package com.example.airecruitmentbackend.interceptor;
 import com.example.airecruitmentbackend.common.Result;
 import com.example.airecruitmentbackend.entity.User;
 import com.example.airecruitmentbackend.mapper.UserMapper;
-import com.example.airecruitmentbackend.util.JwtUtil;
+import com.example.airecruitmentbackend.utils.JwtUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;

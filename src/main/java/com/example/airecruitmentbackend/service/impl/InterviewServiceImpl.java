@@ -12,7 +12,6 @@ import com.example.airecruitmentbackend.entity.Application;
 import com.example.airecruitmentbackend.entity.JobSeeker;
 import com.example.airecruitmentbackend.entity.Position;
 import com.example.airecruitmentbackend.entity.Company;
-import com.example.airecruitmentbackend.entity.User;
 import com.example.airecruitmentbackend.entity.InterviewEvaluation;
 import com.example.airecruitmentbackend.exception.BusinessException;
 import com.example.airecruitmentbackend.mapper.InterviewMapper;
@@ -26,12 +25,11 @@ import com.example.airecruitmentbackend.service.InterviewService;
 import com.example.airecruitmentbackend.service.NotificationService;
 import ai.z.openapi.ZhipuAiClient;
 import ai.z.openapi.service.model.*;
-import com.example.airecruitmentbackend.util.SpeechToTextUtil;
+import com.example.airecruitmentbackend.utils.SpeechToTextUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,7 +58,7 @@ public class InterviewServiceImpl extends ServiceImpl<InterviewMapper, Interview
     private final UserMapper userMapper;
     private final InterviewEvaluationMapper interviewEvaluationMapper;
     private final NotificationService notificationService;
-    private final com.example.airecruitmentbackend.util.OssUtil ossUtil;
+    private final com.example.airecruitmentbackend.utils.OssUtil ossUtil;
     private final RedisTemplate<String, Object> redisTemplate;
     
     /**
@@ -150,15 +148,10 @@ public class InterviewServiceImpl extends ServiceImpl<InterviewMapper, Interview
         Position position = positionMapper.selectById(application.getPositionId());
 
         if (jobSeeker != null && position != null && company != null) {
-            // 获取求职者的用户ID
-            User jobSeekerUser = userMapper.selectOne(new LambdaQueryWrapper<User>()
-                    .eq(User::getId, application.getJobSeekerId()));
-            if (jobSeekerUser != null) {
-                String title = isUpdate ? "面试邀请更新通知" : "面试邀请通知";
-                String content = String.format("您投递的职位【%s】已收到面试邀请，面试时间：%s，面试类型：%s",
-                        position.getTitle(), interview.getInterviewTime(), getInterviewTypeName(interview.getInterviewType()));
-                notificationService.sendNotification(jobSeekerUser.getId(), 3, title, content, interview.getId());
-            }
+            String title = isUpdate ? "面试邀请更新通知" : "面试邀请通知";
+            String content = String.format("您投递的【%s】职位已收到面试邀请，面试时间：%s，面试类型：%s",
+                    position.getTitle(), interview.getInterviewTime(), getInterviewTypeName(interview.getInterviewType()));
+            notificationService.sendNotification(jobSeeker.getUserId(), 2, title, content, interview.getId());
         }
 
         return interview.getId();
@@ -208,26 +201,22 @@ public class InterviewServiceImpl extends ServiceImpl<InterviewMapper, Interview
         Company company = companyMapper.selectById(interview.getCompanyId());
 
         if (application != null && position != null && company != null) {
+            JobSeeker jobSeeker = jobSeekerMapper.selectById(interview.getJobSeekerId());
+
             // 通知求职者
-            User jobSeekerUser = userMapper.selectOne(new LambdaQueryWrapper<User>()
-                    .eq(User::getId, interview.getJobSeekerId()));
-            if (jobSeekerUser != null) {
+            if (jobSeeker != null) {
                 String title = "面试状态更新通知";
-                String content = String.format("您的面试【%s】状态已更新为：%s",
+                String content = String.format("您的【%s】面试状态已更新为：%s",
                         position.getTitle(), getStatusName(status));
-                notificationService.sendNotification(jobSeekerUser.getId(), 2, title, content, interview.getId());
+                notificationService.sendNotification(jobSeeker.getUserId(), 2, title, content, interview.getId());
             }
 
             // 通知企业HR
-            User bossUser = userMapper.selectOne(new LambdaQueryWrapper<User>()
-                    .eq(User::getId, company.getUserId()));
-            if (bossUser != null) {
-                JobSeeker jobSeeker = jobSeekerMapper.selectById(interview.getJobSeekerId());
-                String title = "面试状态更新通知";
-                String content = String.format("求职者【%s】的面试状态已更新为：%s",
-                        jobSeeker != null ? jobSeeker.getName() : "未知", getStatusName(status));
-                notificationService.sendNotification(bossUser.getId(), 2, title, content, interview.getId());
-            }
+            notificationService.sendNotification(company.getUserId(), 2,
+                    "面试状态更新通知",
+                    String.format("求职者【%s】的面试状态已更新为：%s",
+                            jobSeeker != null ? jobSeeker.getName() : "未知", getStatusName(status)),
+                    interview.getId());
         }
 
         log.info("更新面试状态成功：interviewId={}, status={}", interviewId, status);
@@ -407,27 +396,38 @@ public class InterviewServiceImpl extends ServiceImpl<InterviewMapper, Interview
             String audioUrl = extractAndUploadAudio(video);
             log.info("音频提取并上传成功，URL：{}", audioUrl);
 
-            // 3. 调用GLM-4.6v模型分析视频（分析衣着和动作神态）
-            log.info("开始调用GLM-4.6v模型分析视频");
-            Object videoEvaluationResult = analyzeVideoWithGLM(videoUrl);
-            log.info("GLM-4.6v模型分析视频完成");
+            // 3. 并行执行：视频分析 + 语音转文字
+            log.info("开始并行执行视频分析和语音转文字");
+            long parallelStartTime = System.currentTimeMillis();
 
-            // 4. 调用语音转文字工具提取音频内容
-            log.info("开始调用语音转文字工具");
-            String transcript = extractAudioTranscript(audioUrl);
-            log.info("语音转文字完成，结果长度：{}", transcript.length());
+            CompletableFuture<Object> videoFuture = CompletableFuture.supplyAsync(() -> {
+                log.info("开始调用GLM-4.6v模型分析视频");
+                Object result = analyzeVideoWithGLM(videoUrl);
+                log.info("GLM-4.6v模型分析视频完成");
+                return result;
+            });
 
-            // 5. 获取面试题（优先从Redis缓存读取）
+            CompletableFuture<String> transcriptFuture = CompletableFuture.supplyAsync(() -> {
+                log.info("开始调用语音转文字工具");
+                String result = null;
+                try {
+                    result = extractAudioTranscript(audioUrl);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                log.info("语音转文字完成，结果长度：{}", result.length());
+                return result;
+            });
+
+            // 4. 获取面试题（与视频/音频处理并行）
             String positionInfo = "";
             String interviewQuestions = "";
             try {
-                // 优先从Redis缓存读取面试题
                 StringBuilder questionsBuilder = new StringBuilder();
                 questionsBuilder.append("面试题：\n");
-                
+
                 boolean questionsFromCache = false;
-                
-                // 优先从Redis缓存读取面试题
+
                 if (sessionKey != null && !sessionKey.isEmpty()) {
                     try {
                         String redisKey = MOCK_INTERVIEW_SESSION_PREFIX + sessionKey;
@@ -445,26 +445,37 @@ public class InterviewServiceImpl extends ServiceImpl<InterviewMapper, Interview
                         log.error("从Redis读取面试题失败：{}", e.getMessage(), e);
                     }
                 }
-                
-                // 如果Redis缓存中没有面试题，构建默认问题（这是不应该发生的情况）
+
                 if (!questionsFromCache) {
                     log.warn("Redis缓存中没有面试题，使用默认面试题，sessionKey：{}", sessionKey);
                     interviewQuestions = "面试题：\n1. 请自我介绍一下\n2. 你为什么选择我们公司\n3. 你的职业规划是什么\n4. 你如何处理工作压力\n5. 你有什么问题要问我们\n";
                 }
-                
-                // 岗位信息使用默认值，因为模拟面试使用用户自定义的岗位信息
+
                 positionInfo = "岗位信息：\n职位名称：自定义岗位\n职位类别：自定义\n工作城市：不限\n薪资范围：面议\n学历要求：不限\n工作经验：不限\n岗位职责：自定义\n任职要求：自定义\n";
             } catch (Exception e) {
                 log.error("获取面试题失败：{}", e.getMessage(), e);
-                // 使用默认信息
                 positionInfo = "岗位信息：\n职位名称：软件工程师\n职责：负责软件系统的开发和维护\n要求：熟悉Java、Spring Boot等技术\n";
                 interviewQuestions = "面试题：\n1. 请自我介绍一下\n2. 你为什么选择我们公司\n3. 你的职业规划是什么\n4. 你如何处理工作压力\n5. 你有什么问题要问我们\n";
             }
 
-            // 6. 调用GLM-4-Flash-250414模型分析回答内容，包含岗位信息和面试题
-            log.info("开始调用GLM-4-Flash-250414模型分析回答内容");
-            Object contentEvaluationResult = analyzeContentWithFlash(transcript, positionInfo, interviewQuestions);
-            log.info("GLM-4-Flash-250414模型分析完成");
+            // 5. 等待语音转文字完成后，立即启动内容分析（可能与视频分析并行）
+            String transcript = transcriptFuture.get();
+            String finalPositionInfo = positionInfo;
+            String finalInterviewQuestions = interviewQuestions;
+
+            CompletableFuture<Object> contentFuture = CompletableFuture.supplyAsync(() -> {
+                log.info("开始调用GLM-4-Flash-250414模型分析回答内容");
+                Object result = analyzeContentWithFlash(transcript, finalPositionInfo, finalInterviewQuestions);
+                log.info("GLM-4-Flash-250414模型分析完成");
+                return result;
+            });
+
+            // 6. 等待视频分析和内容分析都完成
+            Object videoEvaluationResult = videoFuture.get();
+            Object contentEvaluationResult = contentFuture.get();
+
+            long parallelEndTime = System.currentTimeMillis();
+            log.info("并行评估全部完成，总耗时：{}ms", (parallelEndTime - parallelStartTime));
 
             // 7. 综合评估结果
             log.info("开始综合评估结果");
@@ -742,11 +753,11 @@ public class InterviewServiceImpl extends ServiceImpl<InterviewMapper, Interview
                     .messages(Arrays.asList(
                             ChatMessage.builder()
                                     .role(ChatMessageRole.USER.value())
-                                    .content("你是一个专业且严格的招聘面试官，请根据以下岗位信息和求职者信息，生成10个面试题。\n\n" +
+                                    .content("你是一个专业且严格的招聘面试官，请根据以下岗位信息和求职者信息，生成8-10个面试题。\n\n" +
                                             "要求：\n" +
                                             "1. 每个问题20到40字\n" +
-                                            "2. 问题要针对岗位要求和求职者背景\n" +
-                                            "3. 问题要涵盖专业技能、工作经验、职业规划等方面\n" +
+                                            "2. 问题要针对岗位要求和求职者背景,满足企业主流真实面试题标准\n" +
+                                            "3. 问题要涵盖专业技能、工作经验、职业规划等方面,能体验求职者能力或技术深度\n" +
                                             "4. 请以JSON格式返回，包含一个questions数组\n" +
                                             "5. 不要包含任何额外的解释或说明\n" +
                                             "\n" +
@@ -768,7 +779,7 @@ public class InterviewServiceImpl extends ServiceImpl<InterviewMapper, Interview
                             .type("json_object")
                             .build())
                     .temperature(0.7f)
-                    .maxTokens(5000)
+                    .maxTokens(3000)
                     .build();
 
             // 6. 调用API
@@ -879,26 +890,35 @@ public class InterviewServiceImpl extends ServiceImpl<InterviewMapper, Interview
             CompletableFuture.runAsync(() -> {
                 try {
                     log.info("开始异步执行AI评估，interviewId：{}", interviewId);
-                    
-                    // 7.1 调用GLM-4.6v模型分析视频（分析衣着和动作神态）
-                    log.info("开始调用GLM-4.6v模型分析视频");
-                    Object videoEvaluationResult = analyzeVideoWithGLM(videoUrl);
-                    log.info("GLM-4.6v模型分析视频完成");
+                    long parallelStartTime = System.currentTimeMillis();
 
-                    // 7.2 调用语音转文字工具提取音频内容
-                    log.info("开始调用语音转文字工具");
-                    String transcript = extractAudioTranscript(audioUrl);
-                    log.info("语音转文字完成，结果长度：{}", transcript.length());
+                    // 7.1 并行执行：视频分析 + 语音转文字
+                    CompletableFuture<Object> videoFuture = CompletableFuture.supplyAsync(() -> {
+                        log.info("开始调用GLM-4.6v模型分析视频");
+                        Object result = analyzeVideoWithGLM(videoUrl);
+                        log.info("GLM-4.6v模型分析视频完成");
+                        return result;
+                    });
 
-                    // 7.3 获取岗位信息和面试题
+                    CompletableFuture<String> transcriptFuture = CompletableFuture.supplyAsync(() -> {
+                        log.info("开始调用语音转文字工具");
+                        String result = null;
+                        try {
+                            result = extractAudioTranscript(audioUrl);
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                        log.info("语音转文字完成，结果长度：{}", result.length());
+                        return result;
+                    });
+
+                    // 7.2 获取岗位信息和面试题（与视频/音频处理并行）
                     String positionInfo = "";
                     String interviewQuestions = "";
                     try {
-                        // 从面试记录获取岗位信息
                         Position position = getPositionFromInterview(interviewId);
                         log.info("从面试记录获取岗位成功，岗位ID：{}，职位名称：{}", position.getId(), position.getTitle());
-                        
-                        // 构建岗位信息
+
                         StringBuilder positionInfoBuilder = new StringBuilder();
                         positionInfoBuilder.append("岗位信息：\n");
                         positionInfoBuilder.append("职位名称：").append(position.getTitle() != null ? position.getTitle() : "").append("\n");
@@ -911,23 +931,20 @@ public class InterviewServiceImpl extends ServiceImpl<InterviewMapper, Interview
                         positionInfoBuilder.append("任职要求：").append(position.getRequirement() != null ? position.getRequirement() : "").append("\n");
                         positionInfo = positionInfoBuilder.toString();
 
-                        // 从Redis缓存获取面试题（而不是重新生成）
                         StringBuilder questionsBuilder = new StringBuilder();
                         questionsBuilder.append("面试题：\n");
-                        
+
                         try {
                             String redisKey = INTERVIEW_QUESTIONS_PREFIX + interviewId;
                             Object cachedQuestions = redisTemplate.opsForValue().get(redisKey);
-                            
+
                             if (cachedQuestions != null && cachedQuestions instanceof List) {
-                                // 从Redis读取面试题
                                 List<String> savedQuestions = (List<String>) cachedQuestions;
                                 for (int i = 0; i < savedQuestions.size(); i++) {
                                     questionsBuilder.append((i + 1)).append(". ").append(savedQuestions.get(i)).append("\n");
                                 }
                                 log.info("从Redis缓存读取面试题成功，题目数量：{}", savedQuestions.size());
                             } else {
-                                // Redis缓存中没有面试题，使用默认面试题
                                 log.warn("Redis缓存中没有面试题，使用默认面试题，interviewId：{}", interviewId);
                                 for (int i = 1; i <= 5; i++) {
                                     questionsBuilder.append(i).append(". 默认面试题").append("\n");
@@ -935,7 +952,6 @@ public class InterviewServiceImpl extends ServiceImpl<InterviewMapper, Interview
                             }
                         } catch (Exception e) {
                             log.error("从Redis读取面试题失败：{}", e.getMessage(), e);
-                            // 读取失败，使用默认面试题
                             for (int i = 1; i <= 5; i++) {
                                 questionsBuilder.append(i).append(". 默认面试题").append("\n");
                             }
@@ -943,15 +959,28 @@ public class InterviewServiceImpl extends ServiceImpl<InterviewMapper, Interview
                         interviewQuestions = questionsBuilder.toString();
                     } catch (Exception e) {
                         log.error("获取岗位信息和面试题失败：{}", e.getMessage(), e);
-                        // 使用默认信息
                         positionInfo = "岗位信息：\n职位名称：软件工程师\n职责：负责软件系统的开发和维护\n要求：熟悉Java、Spring Boot等技术\n";
                         interviewQuestions = "面试题：\n1. 请自我介绍一下\n2. 你为什么选择我们公司\n3. 你的职业规划是什么\n4. 你如何处理工作压力\n5. 你有什么问题要问我们\n";
                     }
 
-                    // 7.4 调用GLM-4-Flash-250414模型分析回答内容，包含岗位信息和面试题
-                    log.info("开始调用GLM-4-Flash-250414模型分析回答内容");
-                    Object contentEvaluationResult = analyzeContentWithFlash(transcript, positionInfo, interviewQuestions);
-                    log.info("GLM-4-Flash-250414模型分析完成");
+                    // 7.3 等待语音转文字完成后，立即启动内容分析（可能与视频分析并行）
+                    String transcript = transcriptFuture.get();
+                    String finalPositionInfo = positionInfo;
+                    String finalInterviewQuestions = interviewQuestions;
+
+                    CompletableFuture<Object> contentFuture = CompletableFuture.supplyAsync(() -> {
+                        log.info("开始调用GLM-4-Flash-250414模型分析回答内容");
+                        Object result = analyzeContentWithFlash(transcript, finalPositionInfo, finalInterviewQuestions);
+                        log.info("GLM-4-Flash-250414模型分析完成");
+                        return result;
+                    });
+
+                    // 7.4 等待视频分析和内容分析都完成
+                    Object videoEvaluationResult = videoFuture.get();
+                    Object contentEvaluationResult = contentFuture.get();
+
+                    long parallelEndTime = System.currentTimeMillis();
+                    log.info("并行评估全部完成，总耗时：{}ms", (parallelEndTime - parallelStartTime));
 
                     // 7.5 综合评估结果
                     log.info("开始综合评估结果");
@@ -965,7 +994,6 @@ public class InterviewServiceImpl extends ServiceImpl<InterviewMapper, Interview
                     log.info("异步AI评估完成，interviewId：{}", interviewId);
                 } catch (Exception e) {
                     log.error("异步执行AI评估失败：{}", e.getMessage(), e);
-                    // 异步执行失败不影响接口返回，只记录日志
                 }
             });
 
@@ -1094,7 +1122,7 @@ public class InterviewServiceImpl extends ServiceImpl<InterviewMapper, Interview
                                             "   - 90-100分：表现卓越，回答深入且有独特见解\n" +
                                             "3. 对于以下情况要给予低分数：\n" +
                                             "   - 回答中多次出现\"不知道\"、\"不了解\"等模糊表述\n" +
-                                            "   - 面试题未回答完或回答不完整\n" +
+                                            "   - 面试题未回答完或回答不完整(只要少回答一题扣10分)\n" +
                                             "   - 专业知识回答错误或不准确\n" +
                                             "   - 逻辑混乱，表达不清晰\n" +
                                             "4. 给出总体评分（0-100），要综合考虑各维度表现\n" +
@@ -1108,7 +1136,7 @@ public class InterviewServiceImpl extends ServiceImpl<InterviewMapper, Interview
                                             "  \"professionalScore\": 30,\n" +
                                             "  \"overallScore\": 65,\n" +
                                             "  \"feedback\": \"整体表现一般...\",\n" +
-                                            "  \"suggestions\": [\"建议1\", \"建议2\"]\n" +
+                                            "  \"suggestions\": [\"建议xx\", \"建议xx\"]\n" +
                                             "}\n" +
                                             "\n" +
                                             "请严格按照上述格式返回评估结果，不要包含任何额外的解释或说明。")
@@ -1117,8 +1145,8 @@ public class InterviewServiceImpl extends ServiceImpl<InterviewMapper, Interview
                     .responseFormat(ResponseFormat.builder()
                             .type("json_object")
                             .build())
-                    .temperature(0.1f)
-                    .maxTokens(2000)
+                    .temperature(0.2f)
+                    .maxTokens(3000)
                     .build();
 
             // 5. 调用API
@@ -1410,7 +1438,7 @@ public class InterviewServiceImpl extends ServiceImpl<InterviewMapper, Interview
                             .type("json_object")
                             .build())
                     .temperature(0.1f)
-                    .maxTokens(2000)
+                    .maxTokens(3000)
                     .build();
 
             // 5. 调用API

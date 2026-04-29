@@ -11,6 +11,7 @@ import com.example.airecruitmentbackend.mapper.PositionMapper;
 import com.example.airecruitmentbackend.mapper.JobProfileMapper;
 import com.example.airecruitmentbackend.mapper.JobSkillTagMapper;
 import com.example.airecruitmentbackend.service.JobProfileService;
+import com.example.airecruitmentbackend.service.ProfileVectorService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import ai.z.openapi.ZhipuAiClient;
 import ai.z.openapi.service.model.*;
@@ -47,6 +48,9 @@ public class JobProfileServiceImpl extends ServiceImpl<JobProfileMapper, JobProf
     @Autowired
     @Qualifier("jobProfileExecutor")
     private ExecutorService jobProfileExecutor;
+
+    @Autowired
+    private ProfileVectorService profileVectorService;
 
     @Override
     @Transactional
@@ -105,6 +109,18 @@ public class JobProfileServiceImpl extends ServiceImpl<JobProfileMapper, JobProf
         log.info("更新岗位画像生成标记成功");
 
         saveJobSkillTags(positionId, extractDTO.getSkills());
+
+        try {
+            log.info("开始生成岗位Embedding向量...");
+            boolean vectorResult = profileVectorService.generateJobProfileVector(jobProfile);
+            if (vectorResult) {
+                log.info("岗位Embedding向量生成成功");
+            } else {
+                log.warn("岗位Embedding向量生成失败");
+            }
+        } catch (Exception e) {
+            log.error("生成岗位Embedding向量异常: {}", e.getMessage());
+        }
 
         JobProfileResponse response = buildJobProfileResponse(jobProfile, position);
         log.info("岗位画像生成流程完成，返回响应数据");
@@ -286,7 +302,7 @@ public class JobProfileServiceImpl extends ServiceImpl<JobProfileMapper, JobProf
         }
 
         // 2. 使用glm-4.5模型
-        String model = AIConstant.FLASH_FREE_MODEL;
+        String model = AIConstant.LOW_MODEL;
 
         // 3. 创建GLM客户端
         ZhipuAiClient client = ZhipuAiClient.builder().ofZHIPU()

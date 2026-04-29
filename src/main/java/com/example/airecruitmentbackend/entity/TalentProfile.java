@@ -82,6 +82,11 @@ public class TalentProfile {
     private String aiEvaluation;
 
     /**
+     * 文本嵌入向量（JSON格式，用于语义相似度计算）
+     */
+    private String embeddingVector;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createdAt;

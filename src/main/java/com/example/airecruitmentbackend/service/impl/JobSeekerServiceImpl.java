@@ -10,7 +10,7 @@ import com.example.airecruitmentbackend.mapper.ApplicationMapper;
 import com.example.airecruitmentbackend.mapper.JobSeekerMapper;
 import com.example.airecruitmentbackend.service.JobSeekerService;
 import com.example.airecruitmentbackend.service.TalentProfileService;
-import com.example.airecruitmentbackend.util.OssUtil;
+import com.example.airecruitmentbackend.utils.OssUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

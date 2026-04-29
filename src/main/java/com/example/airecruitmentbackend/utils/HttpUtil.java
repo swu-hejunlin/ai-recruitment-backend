@@ -1,4 +1,4 @@
-package com.example.airecruitmentbackend.util;
+package com.example.airecruitmentbackend.utils;
 
 import org.apache.http.Consts;
 import org.apache.http.HttpEntity;

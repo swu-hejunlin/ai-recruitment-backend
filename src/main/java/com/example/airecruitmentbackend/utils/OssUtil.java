@@ -1,4 +1,4 @@
-package com.example.airecruitmentbackend.util;
+package com.example.airecruitmentbackend.utils;
 
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.model.*;

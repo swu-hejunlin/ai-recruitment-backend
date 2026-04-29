@@ -13,7 +13,7 @@ import com.example.airecruitmentbackend.mapper.UserMapper;
 import com.example.airecruitmentbackend.mapper.JobSeekerMapper;
 import com.example.airecruitmentbackend.mapper.CompanyMapper;
 import com.example.airecruitmentbackend.service.UserService;
-import com.example.airecruitmentbackend.util.JwtUtil;
+import com.example.airecruitmentbackend.utils.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
